@@ -222,6 +222,8 @@ appealWindowSeconds
 payoutTimelockSeconds
 maxTicketAmount
 maxWalletAmountPerDraw
+poolScope
+poolId
 status
 createdAt
 openedAt
@@ -283,16 +285,24 @@ ticketHash
 combinationsCount
 stakePerCombination
 ticketPrice
+operatorIdHash
+partnerIdHash
+jurisdictionIdHash
+licenseScopeHash
+poolScope
+poolId
 purchasedAt
 ```
 
 `ticketHash` - hash полного off-chain описания билета:
 
 ```text
-hash(drawId, buyer, selections, combinationsCount, stakePerCombination, ticketNonce)
+hash(drawId, buyer, selections, combinationsCount, stakePerCombination, operatorIdHash, jurisdictionIdHash, poolScope, ticketNonce)
 ```
 
 Полный список selections (выборов пользователя) может храниться off-chain, но hash должен позволять проверить, что билет не изменился после покупки.
+
+`operatorIdHash`, `partnerIdHash`, `jurisdictionIdHash` и `licenseScopeHash` нужны для будущей B2B/B2B2C-модели. Они не должны раскрывать персональные данные игрока и не означают, что контракт сам проверяет локальную лицензию. Контракт принимает эти поля только как часть signed quote / purchase permit.
 
 ### 6.2. Покупка билета
 
@@ -300,6 +310,20 @@ hash(drawId, buyer, selections, combinationsCount, stakePerCombination, ticketNo
 
 ```text
 buyTicket(drawId, ticketHash, combinationsCount, stakePerCombination, ticketPrice)
+```
+
+Для B2B-совместимости фактическая реализация должна принимать signed quote payload, где зафиксированы:
+
+```text
+operatorIdHash
+partnerIdHash
+jurisdictionIdHash
+licenseScopeHash
+poolScope
+poolId
+quoteId
+quoteExpiry
+quoteSignature
 ```
 
 Проверки:
@@ -314,7 +338,11 @@ buyTicket(drawId, ticketHash, combinationsCount, stakePerCombination, ticketPric
 - walletSpentInDraw + ticketPrice <= maxWalletAmountPerDraw;
 - USDC allowance достаточный;
 - USDC transferFrom успешен;
-- ticketHash не использовался ранее.
+- ticketHash не использовался ранее;
+- signed quote валиден;
+- signed quote не истек;
+- quoteId не использовался ранее;
+- operatorIdHash/jurisdictionIdHash/poolScope совпадают с подписанными значениями.
 
 Контрактная проверка минимальной цены:
 
@@ -325,7 +353,7 @@ require(stakePerCombination >= drawManager.comboPrice(drawId), "Stake below comb
 События:
 
 ```text
-TicketPurchased(drawId, ticketId, buyer, ticketHash, combinationsCount, ticketPrice)
+TicketPurchased(drawId, ticketId, buyer, ticketHash, combinationsCount, ticketPrice, operatorIdHash, jurisdictionIdHash, poolScope)
 WalletDrawSpendUpdated(drawId, buyer, totalSpent)
 ```
 
@@ -489,6 +517,10 @@ userAddress
 tokenAddress
 amount
 ticketId
+operatorIdHash
+jurisdictionIdHash
+poolScope
+poolId
 claimDeadline
 ```
 
@@ -505,7 +537,14 @@ claimDeadline
 - claimDeadline не истек;
 - выплаты активированы;
 - контракт не на паузе;
-- KYC/compliance блокировка учтена off-chain до claimFor.
+- KYC/compliance блокировка не позволяет исполнить claim/claimFor.
+
+Техническая модель блокировки:
+
+- базовый вариант MVP: blocked payout остается в settlement report / payout manifest как pending entitlement, но не включается в активный claimable payoutRoot;
+- если blocked leaf заранее включен в опубликованный root ради аудита, PayoutVault обязан хранить блокирующий статус leaf и отклонять claim/claimFor до unblock или reissueRoot;
+- backend, frontend и executor не должны показывать blocked leaf как claimable;
+- KYC/compliance не меняет amount и не используется как скрытый отказ от выплаты.
 
 Контрактная проверка срока claim:
 
@@ -769,7 +808,7 @@ DrawPaused(drawId, reasonCode)
 DrawResumed(drawId)
 DrawCancelled(drawId, reasonCode)
 
-TicketPurchased(drawId, ticketId, buyer, ticketHash, combinationsCount, ticketPrice)
+TicketPurchased(drawId, ticketId, buyer, ticketHash, combinationsCount, ticketPrice, operatorIdHash, jurisdictionIdHash, poolScope)
 
 TreasuryAccounted(drawId, handle, prizePool, platformFeeGross, jackpotContribution)
 GasReserveAccounted(drawId, gasReserve, platformOperatingFee)
@@ -946,6 +985,8 @@ DrawManager + TicketVault + TreasuryVault + ResultRegistry + PayoutVault + Acces
 - MVP-контракты non-upgradeable;
 - тяжелые расчеты остаются off-chain;
 - on-chain фиксируются деньги, параметры, hash/root и выплаты;
+- on-chain события фиксируют operatorIdHash/jurisdictionIdHash/poolScope как B2B-совместимые технические поля;
+- контракт не проверяет локальную лицензию оператора, но принимает только backend-signed quote;
 - параметры тиража нельзя менять после Open;
 - jackpot фиксируется до Open;
 - 80/10/10 сохраняется;

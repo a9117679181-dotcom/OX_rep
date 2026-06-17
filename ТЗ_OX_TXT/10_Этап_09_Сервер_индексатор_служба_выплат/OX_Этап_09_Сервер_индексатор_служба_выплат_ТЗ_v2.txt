@@ -136,6 +136,9 @@ Monitoring: logs + metrics + alerts
 ```text
 User
 Wallet
+Operator
+Jurisdiction
+PoolScope
 Draw
 SportEvent
 ProviderEventMapping
@@ -151,6 +154,7 @@ PayoutLeaf
 PayoutProof
 PayoutJob
 RefundJob
+OperatorReconciliationReport
 BlockchainEvent
 AuditLog
 AdminAction
@@ -193,6 +197,10 @@ payoutTimelockEndsAt
 validEventsCount
 resultVersion
 payoutRootVersion
+poolScope
+poolId
+allowedOperatorSetHash
+allowedJurisdictionSetHash
 createdAt
 updatedAt
 ```
@@ -208,6 +216,12 @@ selectionsJson
 combinationsCount
 stakePerCombination
 ticketPrice
+operatorId
+partnerId
+jurisdictionId
+licenseScope
+poolScope
+poolId
 txHash
 blockNumber
 status
@@ -230,6 +244,10 @@ payoutRoot
 totalAmount
 validEventsCount
 status
+poolScope
+poolId
+operatorSetHash
+jurisdictionSetHash
 createdAt
 publishedAt
 activatedAt
@@ -245,6 +263,12 @@ userAddress
 tokenAddress
 amount
 ticketId
+operatorId
+partnerId
+jurisdictionId
+licenseScope
+poolScope
+poolId
 claimDeadline
 leafHash
 proofJson
@@ -252,6 +276,39 @@ status
 txHash
 claimedAt
 ```
+
+### 5.6. Operator
+
+```text
+operatorId
+displayName
+legalName
+status
+allowedJurisdictions
+licenseScopes
+allowedPoolScopes
+integrationMode
+apiKeyHash
+webhookUrl
+settlementCurrency
+createdAt
+updatedAt
+lastReviewedAt
+```
+
+`Operator` отличается от обычного affiliate partner. Operator может быть локальной лицензированной букмекерской компанией или B2B/B2B2C-интегратором. В MVP таблица может использоваться как internal registry без внешнего operator portal.
+
+### 5.7. PoolScope
+
+```text
+GLOBAL_POOL
+COUNTRY_POOL
+OPERATOR_POOL
+LICENSE_POOL
+DIRECT_OX_POOL
+```
+
+`poolScope` нужен для юридической развилки. Если юристы запрещают единый глобальный пул в конкретной стране, backend должен уметь маршрутизировать покупку в country/operator/license-segregated pool без переписывания всей модели данных.
 
 ### 5.6. AuditLog
 
@@ -370,6 +427,9 @@ GET /draws/{drawId}/results
 GET /draws/{drawId}/payouts/{leafIndex}/proof
 GET /users/{address}/draws/{drawId}/payouts
 GET /draws/{drawId}/public-report
+GET /operators/{operatorId}/draws/current
+GET /operators/{operatorId}/tickets/{ticketId}
+GET /operators/{operatorId}/reconciliation/{drawId}
 ```
 
 Публичный API должен отдавать:
@@ -384,6 +444,7 @@ GET /draws/{drawId}/public-report
 - Merkle proof для пользователя;
 - публичные hash/root;
 - понятный отчет по тиражу.
+- operator-aware статус, если запрос идет через operator gateway.
 
 Публичный API не должен отдавать:
 
@@ -392,6 +453,7 @@ GET /draws/{drawId}/public-report
 - полный risk report, если он помогает киту;
 - персональные данные;
 - admin-only поля.
+- чужие operator reports.
 
 ---
 
@@ -423,6 +485,12 @@ POST /admin/manual-result-proposals/{proposalId}/reject
 POST /admin/draws/{drawId}/settlement/build
 POST /admin/draws/{drawId}/payout-root/build
 POST /admin/draws/{drawId}/payout-root/publish
+
+GET /admin/operators
+POST /admin/operators
+POST /admin/operators/{operatorId}/pause
+POST /admin/operators/{operatorId}/resume
+GET /admin/operators/{operatorId}/reconciliation/{drawId}
 
 GET /admin/payouts/queue
 POST /admin/payouts/{payoutJobId}/retry
@@ -553,6 +621,9 @@ Settlement Engine работает off-chain.
 - jackpot winners;
 - refund list;
 - payout manifest draft.
+- operator reconciliation draft;
+- poolScope summary;
+- jurisdiction exposure summary.
 
 Правила:
 
@@ -562,6 +633,9 @@ Settlement Engine работает off-chain.
 - при 14/13 jackpot не разыгрывается;
 - при 3+ void events формируется refund;
 - payout amount нельзя менять после публикации payout root без отмены root и нового timelock.
+- settlement должен сохранять operatorId/jurisdictionId/poolScope для каждого ticket и payout leaf;
+- операторская отчетность не может менять payout amount или порядок выплат;
+- если poolScope != GLOBAL_POOL, settlement не должен смешивать tickets из разных poolId.
 
 Связь со смарт-контрактом:
 
@@ -950,6 +1024,18 @@ paid status only after blockchain confirmation
 ```
 
 ```text
+operator reconciliation cannot override on-chain payout state
+```
+
+```text
+poolScope in ticket == poolScope in quote == poolScope in payout leaf
+```
+
+```text
+operatorId/jurisdictionId must be preserved from quote to ticket, settlement, payout manifest and report
+```
+
+```text
 same leaf cannot be paid twice
 ```
 
@@ -1032,6 +1118,8 @@ MVP должен пройти:
 - описан checkpoint/replay/recovery механизм индексатора;
 - описана связь Settlement Engine -> payoutRoot -> PayoutVault;
 - описаны proof checks для Payout Executor.
+- добавлены B2B/B2B2C-compatible поля operatorId, jurisdictionId, licenseScope и poolScope.
+- добавлен минимальный Operator Registry и operator reconciliation report как internal/post-MVP compatible слой.
 
 ---
 
@@ -1056,6 +1144,8 @@ API + Database + Indexer + Oracle Service + Risk Engine + Settlement Engine + Me
 - executor платит газ, но не имеет доступа к пользовательским средствам;
 - gas alerts по gasCoverageRatio и executor wallet обязательны;
 - секреты и ключи хранятся через защищенный secrets/KMS-подход;
+- backend сохраняет operatorId, partnerId, jurisdictionId, licenseScope и poolScope на всем пути quote -> ticket -> settlement -> payout -> reconciliation;
+- полноценный Operator Gateway может быть post-MVP, но модель данных должна быть готова к нему уже в MVP.
 - audit log обязателен;
 - мониторинг и алерты обязательны;
 - ручные действия должны быть видны и логироваться.

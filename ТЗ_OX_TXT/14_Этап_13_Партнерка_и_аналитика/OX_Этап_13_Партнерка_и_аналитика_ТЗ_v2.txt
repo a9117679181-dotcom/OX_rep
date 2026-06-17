@@ -182,6 +182,9 @@ Admin / SuperAdmin утверждает критические действия:
 | Сущность | Назначение |
 |---|---|
 | Affiliate Partner | партнер, его статус, условия и ограничения |
+| Licensed Operator | локальный лицензированный оператор для B2B/B2B2C-интеграции |
+| Operator Gateway | закрытый API/SDK/widget слой для оператора |
+| Operator Reconciliation Report | сверка оборота, билетов, выплат, refund и комиссии оператора |
 | Referral Link | ссылка партнера с кодом и UTM |
 | Referral Code | код партнера для атрибуции |
 | Campaign | кампания партнера |
@@ -216,6 +219,28 @@ Admin / SuperAdmin утверждает критические действия:
 - updatedAt;
 - createdBy;
 - lastReviewedAt.
+
+Если partner является будущим licensed operator, дополнительно храним:
+
+- operatorId;
+- legalEntityType;
+- licenseNumber;
+- licenseJurisdictions;
+- licenseScope;
+- allowedPoolScopes;
+- integrationMode: API, SDK, widget, iframe или manual report;
+- operatorComplianceStatus;
+- settlementCurrency;
+- reconciliationContact;
+- supportResponsibility;
+- complaintHandlingResponsibility.
+
+Правило:
+
+```text
+Обычный affiliate partner не получает операторские права.
+Licensed operator не получает права менять draw, events, resultRoot, payoutRoot, settlement или jackpot.
+```
 
 Статусы партнера:
 
@@ -516,6 +541,7 @@ Qualified Players
 Commissions
 Payouts
 Compliance Rules
+Operator Reconciliation, если партнер является licensed operator
 Support
 ```
 
@@ -532,6 +558,8 @@ Support
 - approved balance;
 - rejected/blocked amount;
 - fraud warnings, если есть.
+- operator status, если партнер является licensed operator;
+- allowed poolScope, если партнер является licensed operator.
 
 ### 11.2. Referral Links
 
@@ -1074,6 +1102,9 @@ Compliance Dashboard
 Поля:
 
 - partnerId;
+- operatorId, если применимо;
+- jurisdictionId;
+- poolScope;
 - period;
 - clicks;
 - wallet connects;
@@ -1088,6 +1119,43 @@ Compliance Dashboard
 - RevShare approved;
 - payout status;
 - notes.
+
+### 21.1.1. Operator reconciliation report
+
+Для B2B/B2B2C licensed operator нужен отдельный отчет сверки.
+
+Поля:
+
+- operatorId;
+- partnerId, если operator связан с партнерской атрибуцией;
+- period;
+- drawId;
+- jurisdictionId;
+- licenseScope;
+- poolScope;
+- poolId;
+- ticketsSold;
+- totalHandle;
+- ordinaryPrizePool;
+- jackpotContribution;
+- platformFeeGross;
+- operatorCommission;
+- oxCommission;
+- refunds;
+- payouts;
+- unclaimedPayouts;
+- blockedPayouts;
+- payoutRootVersion;
+- payoutManifestHash;
+- settlementStatus;
+- reconciliationStatus.
+
+Правило:
+
+```text
+Operator reconciliation report не является источником истины по выплатам.
+При споре прав активный payoutRoot и on-chain события.
+```
 
 ### 21.2. Финансовый отчет
 
@@ -1224,7 +1292,11 @@ Cancelled
 - approve commission;
 - export report;
 - get partner dashboard;
-- get internal affiliate dashboard.
+- get internal affiliate dashboard;
+- create/update operator, если включен B2B internal mode;
+- get operator draw status;
+- get operator reconciliation report;
+- export operator settlement report.
 
 Технические требования:
 
@@ -1233,6 +1305,9 @@ Cancelled
 - rate limit публичных tracking endpoints;
 - подпись или проверка clickId/subId при интеграциях;
 - не доверять клиентскому ref без серверной проверки;
+- не доверять operatorId из клиента без server-side allowlist;
+- operatorId, jurisdictionId, licenseScope и poolScope должны совпадать с backend-signed purchase permit;
+- operator reconciliation report должен строиться из ticket, settlement, payoutRoot и blockchain events, а не из ручной таблицы оператора;
 - не принимать ref из запрещенного источника;
 - хранить историю изменений ставок;
 - корректно обрабатывать delayed blockchain events.
@@ -1321,6 +1396,7 @@ Cancelled
 - Finance видит отчет к выплате;
 - все изменения ставок и статусов пишутся в audit log;
 - партнерские выплаты отделены от выплат игрокам;
+- B2B-совместимые поля operatorId/jurisdictionId/licenseScope/poolScope сохраняются в отчетах, если покупка пришла через оператора;
 - продуктовая аналитика не содержит seed phrase, private key, KYC details и лишних персональных данных;
 - отчеты экспортируются в CSV;
 - операционные расходы имеют категории.
@@ -1342,6 +1418,8 @@ Cancelled
 | Нужен ли cookie consent | Проверить по странам запуска |
 | Формат выплаты партнерам | TBD: USDC/fiat/инвойс |
 | Срок хранения партнерских данных | 5 лет предварительно |
+| Формат Operator Gateway | Post-MVP, но поля совместимости добавлены в MVP |
+| Может ли оператор работать с GLOBAL_POOL | TBD по каждой юрисдикции |
 | Внешний BI-инструмент | TBD после выбора инфраструктуры |
 
 ---

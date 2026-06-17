@@ -270,6 +270,30 @@ backend-signed purchase permit (подписанное бэкендом разр
 Все выданные permit логируются.
 ```
 
+B2B/B2B2C-совместимость:
+
+```text
+Первый этап может работать как прямой B2C/crypto gaming launch в разрешенных странах.
+Второй этап должен поддерживать локальных лицензированных операторов без переписывания purchase permit.
+```
+
+Поэтому permit уже в MVP должен поддерживать:
+
+- operatorId или DIRECT_OX;
+- partnerId, если есть партнерская атрибуция;
+- jurisdictionId;
+- licenseScope;
+- poolScope: GLOBAL_POOL, COUNTRY_POOL, OPERATOR_POOL, LICENSE_POOL или DIRECT_OX_POOL;
+- poolId;
+- operatorComplianceStatus;
+- operatorAllowedForDraw.
+
+Правило:
+
+```text
+backend не выдает permit, если operatorId/jurisdictionId/licenseScope/poolScope не разрешены для конкретного draw.
+```
+
 ---
 
 ## 6. KYC/AML политика
@@ -495,6 +519,8 @@ OX не должен хранить:
 | VPN/proxy обход | Высокий | Geo-risk scoring (оценка гео-риска), блокировки, логирование |
 | Санкционный адрес получает выплату | Критический | AML/санкционный screening до покупки и перед выплатой при наличии флага |
 | Партнер ведет трафик из запрещенной страны | Высокий | Партнерские правила, мониторинг, отключение |
+| Локальный оператор считает, что его лицензия покрывает global pool, но это не подтверждено | Критический | отдельный legal approval по jurisdictionId/licenseScope/poolScope |
+| Единый global pool запрещен в стране оператора | Критический | poolScope = COUNTRY_POOL / OPERATOR_POOL / LICENSE_POOL вместо GLOBAL_POOL |
 | Хранение лишних персональных данных | Высокий | KYC-данные у провайдера, минимум данных в OX |
 | Реклама нарушает местные правила | Высокий | Маркетинг только после country approval (одобрения страны) |
 
@@ -544,9 +570,22 @@ Permit должен включать:
 - maximumAmount;
 - countryRiskStatus;
 - kycTier;
+- operatorId или DIRECT_OX;
+- partnerId, если применимо;
+- jurisdictionId;
+- licenseScope;
+- poolScope;
+- poolId;
 - expirationTime;
 - nonce;
 - backend signature.
+
+Для B2B/B2B2C:
+
+- локальный оператор может передавать OX только минимально необходимые compliance-сигналы;
+- OX не должен получать лишние персональные данные игрока от оператора;
+- операторская лицензия не считается автоматически достаточной для global pool;
+- по каждой стране нужно отдельно подтвердить, можно ли использовать GLOBAL_POOL или нужен COUNTRY_POOL/OPERATOR_POOL/LICENSE_POOL.
 
 ### 13.2. География
 
@@ -619,4 +658,3 @@ KYC не используется как инструмент отказа от 
 ```
 
 Документ передается юристам как рабочая версия для проверки и дальнейших корректировок.
-

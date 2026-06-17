@@ -1,0 +1,674 @@
+# OX - Каноническая архитектура MVP
+
+Дата: 17.06.2026  
+Версия: v1  
+Статус: каноническое решение для разработки MVP  
+Проект: OX, спортивный экспресс  
+Стартовый продукт: Суперэкспресс 15  
+Сеть MVP: Base  
+Валюта MVP: native USDC  
+
+---
+
+## 1. Назначение документа
+
+Этот документ закрывает двусмысленности между продуктом, смарт-контрактами, серверной частью, индексатором, оракулом, автоматическим исполнителем выплат и пользовательским интерфейсом.
+
+Если этот документ конфликтует с более ранними формулировками, для MVP приоритет имеет этот документ.
+
+Главное решение:
+
+```text
+Контракт хранит деньги, состояния, корни и проверяет право на выплату.
+Backend считает тяжелую логику и готовит манифесты.
+Indexer только читает блокчейн и строит read-model.
+Executor только исполняет утвержденные выплаты.
+```
+
+Стратегическая совместимость:
+
+```text
+MVP может стартовать как B2C/crypto gaming product.
+Архитектура MVP не должна блокировать переход к B2B/B2B2C OX Network.
+Для этого уже в MVP фиксируются operatorId, partnerId, jurisdictionId, licenseScope и poolScope как технические поля совместимости.
+Полноценный Operator Gateway, операторский кабинет, SLA и revenue share остаются post-MVP.
+```
+
+---
+
+## 2. Окончательная граница on-chain и off-chain
+
+| Зона | Что делает | Что не делает |
+|---|---|---|
+| Смарт-контракты | принимают USDC, фиксируют параметры тиража, хранят состояния, учитывают 80/10/10, хранят resultRoot и payoutRoot, проверяют Merkle proof, выполняют claim/claimFor/refund, защищают от double claim, эмитят события, фиксируют operatorIdHash/jurisdictionIdHash/poolScopeHash из signed quote | не получают спортивные данные, не считают победителей перебором билетов, не строят Merkle tree, не принимают ручные решения по результатам, не рассчитывают KYC, не проверяют локальную лицензию оператора |
+| Backend | собирает события, выдает preview/quote, считает exposure, проверяет operator/jurisdiction/poolScope, агрегирует результаты, строит result manifest, считает settlement, строит payout manifest, строит Merkle tree/proofs, дает proof API, ведет audit log | не является источником истины по деньгам, не может менять состояние контракта без роли и подписи, не может менять payout после активации root |
+| Indexer | читает события контрактов, строит read-model, поддерживает checkpoint/replay/reorg recovery, сверяет DB с chain | не публикует результаты, не публикует payoutRoot, не подписывает quote, не исполняет выплаты |
+| Executor | берет утвержденные proof, проверяет claimability, отправляет claimFor, платит gas из executor wallet, делает retry, пишет статус исполнения | не публикует resultRoot, не публикует payoutRoot, не меняет суммы, не обходит KYC/compliance, не имеет доступа к пользовательским средствам |
+| Frontend | показывает preview, цену, риски, статусы, claimability, payout status, jackpot state; в B2B/B2B2C может работать как widget/iframe/operator UI | не считает финальные выплаты как источник истины, не подменяет operator/jurisdiction/poolScope без signed quote |
+
+---
+
+## 3. Источник истины при споре
+
+| Спор | Источник истины |
+|---|---|
+| Куплен ли билет | событие и состояние TicketVault |
+| Сколько USDC принято | состояние TreasuryVault и события приема средств |
+| В каком состоянии тираж | DrawManager |
+| Какой результат финален | финальный resultRoot/resultManifestHash в ResultRegistry |
+| Какая сумма выплаты утверждена | активный payoutRoot в PayoutVault и соответствующий payout manifest |
+| Выплата уже получена или нет | claimed bitmap / claimed state в PayoutVault |
+| К какому оператору/пулу относится билет | on-chain ticket event + signed quote payload + audit log |
+| Какая юрисдикция применялась при покупке | jurisdictionId/licenseScope в signed quote и purchase permit log |
+| Что показывает интерфейс | read-model indexer/backend, но только как отражение chain |
+| Кто и почему сделал ручное действие | audit log + on-chain event с reasonCode |
+
+Правило:
+
+```text
+Если backend DB расходится с контрактом, прав контракт.
+Если frontend расходится с backend, пользовательский интерфейс исправляется.
+Если payout manifest расходится с активным payoutRoot, payoutRoot считается источником исполнения, а manifest блокируется для расследования.
+```
+
+---
+
+## 4. Канонический жизненный цикл тиража
+
+Основная state machine:
+
+| Состояние | Кто переводит | Что разрешено | Следующее состояние |
+|---|---|---|---|
+| CREATED | DrawOperator | настройка тиража до открытия продаж | OPEN или CANCELLED |
+| OPEN | DrawOperator по расписанию/команде | покупка билетов | LOCKED |
+| LOCKED | DrawOperator или автоматический job | покупки запрещены, ждём результаты | RESULT_PROPOSED или CANCELLED |
+| RESULT_PROPOSED | ResultPublisher | опубликован resultRoot, идет окно апелляции | RESULT_FINAL или CANCELLED |
+| RESULT_FINAL | Multisig / ResultFinalizer | результат финален, settlement разрешен | PAYOUT_ROOT_PROPOSED |
+| PAYOUT_ROOT_PROPOSED | RootPublisher | опубликован payoutRoot, идет техническое окно проверки | CLAIMING или root replacement до активации |
+| CLAIMING | RootActivator / Multisig | claim, claimFor, refund по активному root | CLOSED |
+| CLOSED | система | тираж завершен | terminal |
+
+Refund path:
+
+| Состояние | Когда используется | Следующее состояние |
+|---|---|---|
+| CANCELLED | тираж отменен до финального расчета или признан void | REFUND_ROOT_PROPOSED |
+| REFUND_ROOT_PROPOSED | опубликован refundRoot | REFUNDING |
+| REFUNDING | пользователи получают refund через claim/claimFor | CLOSED |
+
+Emergency pause:
+
+```text
+Emergency pause является overlay-состоянием.
+Она не меняет базовый state, но временно запрещает покупку, публикацию root или claim в зависимости от типа pause.
+Pause не дает право менять правила открытого тиража.
+```
+
+---
+
+## 5. Публикация результатов
+
+Для MVP источник результатов:
+
+```text
+backend result aggregator OX + 3 sports data providers + manual fallback только как аварийный сценарий.
+```
+
+Роли:
+
+| Роль | Право |
+|---|---|
+| OracleService | собирает данные, но не пишет в контракт напрямую |
+| ResultPublisher | публикует resultRoot/resultManifestHash |
+| MultisigSigner | подтверждает ручные или спорные решения |
+| ResultFinalizer | финализирует результат после окна апелляции |
+
+Правила:
+
+- результат нельзя финализировать при SourceMismatch;
+- результат нельзя финализировать при активной апелляции;
+- manual fallback требует reasonCode, evidenceHash, audit log и multisig 2 из 3;
+- resultRoot можно перепубликовать только до RESULT_FINAL;
+- каждая перепубликация создает новый resultVersion;
+- старый resultVersion остается в истории и не удаляется;
+- после RESULT_FINAL обычная замена результата запрещена.
+
+Исключение:
+
+```text
+Если после RESULT_FINAL обнаружена критическая ошибка, включается emergency pause.
+Если payoutRoot еще не активирован, допускается cancel/refund или новая result finalization через multisig 2 из 3 и публичный incident report.
+Если выплаты уже начались, результат не заменяется обычным путем; корректировки делаются только компенсирующим root для неполученных или недоплаченных сумм.
+```
+
+---
+
+## 6. Публикация payoutRoot
+
+payoutRoot строится только после RESULT_FINAL.
+
+Для канонического MVP публикация `resultRoot/resultManifestHash` и `payoutRoot/refundRoot` в смарт-контрактах является обязательной. Более ранняя формулировка "если это входит в объем этапа смарт-контрактов" считается закрытой для MVP: без on-chain root нельзя обеспечить публично проверяемую выплату.
+
+Обязательная связка:
+
+```text
+resultVersion -> resultRoot -> settlementReport -> payoutManifest -> payoutRoot
+```
+
+Root payload должен включать:
+
+- chainId;
+- contractAddress;
+- drawId;
+- poolScope;
+- poolId;
+- operatorSetHash, если тираж доступен через операторов;
+- jurisdictionSetHash, если тираж ограничен по юрисдикциям;
+- resultVersion;
+- resultRoot;
+- payoutRootVersion;
+- payoutRoot;
+- payoutManifestHash;
+- asset;
+- totalOrdinaryPayout;
+- totalJackpotPayout;
+- totalRefund;
+- claimStart;
+- manualClaimDeadline;
+- rootPublishedAt.
+
+Роли:
+
+| Роль | Право |
+|---|---|
+| RootPublisher | публикует payoutRoot в состоянии PAYOUT_ROOT_PROPOSED |
+| RootVerifierJob | независимо сверяет суммы и manifest |
+| RootActivator / Multisig | активирует root и переводит тираж в CLAIMING |
+| Executor | не имеет права публиковать или активировать root |
+
+Правила защиты:
+
+- payoutRoot должен ссылаться на финальный resultVersion;
+- сумма листьев не может превышать доступные средства;
+- перед активацией действует техническое окно проверки 30 минут;
+- до активации root можно заменить с новым payoutRootVersion, reasonCode и audit log;
+- после активации root считается неизменяемым для нормального сценария;
+- если после активации обнаружена ошибка, включается emergency pause.
+
+Emergency replacement:
+
+- если claims еще не было, root можно заменить через multisig 2 из 3 и incident report;
+- если хотя бы один claim уже был, нельзя менять уже оплаченные leaves;
+- исправления делаются только через compensating root для неоплаченных или недоплаченных сумм.
+
+---
+
+## 7. Automatic executor
+
+Executor делает:
+
+- читает очередь claimable payouts;
+- получает Merkle proof через backend proof API;
+- сверяет drawId, payoutRootVersion, recipient, amount, asset;
+- проверяет, что leaf не claimed;
+- проверяет KYC/compliance статус в backend;
+- проверяет gas reserve и executor wallet;
+- вызывает claimFor;
+- повторяет временно неуспешные транзакции;
+- пишет txHash и статус;
+- поднимает alert при сбоях.
+
+Executor не имеет права:
+
+- публиковать resultRoot;
+- публиковать payoutRoot;
+- активировать payoutRoot;
+- менять payout amount;
+- отправлять выплату на другой recipient;
+- делать claim без proof;
+- обходить KYC/compliance;
+- использовать prizePool или jackpot для оплаты gas;
+- хранить приватный ключ в открытом виде.
+
+Manual fallback:
+
+- claim() доступен для пользователя после активации payoutRoot, если leaf claimable;
+- интерфейс сначала показывает автоматическую выплату как основной путь;
+- manual fallback явно показывается, если выплата не прошла за 30 минут, executor в GasPaused, executor down или пользователь находится близко к deadline;
+- manual fallback не отменяет automatic executor.
+
+Gas и reimbursement:
+
+- claimFor оплачивает OX из gas reserve через executor wallet;
+- пользовательский manual claim пользователь оплачивает сам;
+- если manual claim был вызван из-за сбоя executor/GasPaused дольше 2 часов, gas reimbursement допускается из gas reserve или platform fee, но не из prizePool и не из jackpot;
+- reimbursement оформляется отдельным reimbursementRoot или отдельной off-chain выплатой с audit log;
+- reimbursement не входит в обязательный core MVP, но учет причины manual claim обязателен.
+
+Allowlist:
+
+- claimFor доступен только allowlisted executor wallets с EXECUTOR_ROLE;
+- обычный claim доступен только самому recipient;
+- executor wallet не должен иметь treasury/root/result права.
+
+---
+
+## 8. Merkle-claim модель
+
+Каноническая структура leaf:
+
+```text
+leaf = hash(
+  chainId,
+  contractAddress,
+  drawId,
+  poolScope,
+  poolId,
+  resultVersion,
+  payoutRootVersion,
+  leafIndex,
+  recipient,
+  ticketId,
+  operatorIdHash,
+  jurisdictionIdHash,
+  payoutType,
+  asset,
+  amount,
+  manualClaimDeadline
+)
+```
+
+payoutType:
+
+- ORDINARY;
+- JACKPOT;
+- REFUND;
+- GAS_REIMBURSEMENT, если включено отдельным root.
+
+Правила:
+
+- entitlement пользователя может быть зафиксирован в settlement report и payout manifest со статусом BlockedKYC или BlockedCompliance;
+- активный claimable payoutRoot для automatic executor и обычного claim содержит только выплаты, которые разрешено исполнять;
+- если выбранная реализация заранее включает blocked leaf в опубликованный root ради аудита, PayoutVault обязан иметь блокирующий статус leaf и запрещать claim/claimFor до unblock или reissueRoot;
+- frontend и executor обязаны показывать такую выплату как blocked, а не claimable;
+- KYC/compliance не меняет сумму выигрыша и не используется как скрытый отказ от выплаты;
+- снятие блокировки оформляется через reissueRoot или unblock procedure с reasonCode, audit log и multisig 2 из 3, если действие влияет на деньги;
+- claimFor переводит средства только recipient, а не executor;
+- claim переводит средства только msg.sender, если msg.sender равен recipient;
+- leafIndex используется для claimed bitmap;
+- повторный claim невозможен;
+- proof API не должен раскрывать чужие персональные данные;
+- Merkle proof и manifest резервируются.
+
+Сроки:
+
+| Параметр | Значение MVP |
+|---|---|
+| technical root review window | 30 минут |
+| sponsored executor window | 30 дней после claimStart |
+| manual claim window | 365 дней после claimStart |
+
+Unclaimed payouts:
+
+- после sponsored executor window executor больше не обязан платить gas автоматически;
+- до manualClaimDeadline пользователь может сделать claim сам;
+- после manualClaimDeadline невостребованные средства переводятся в UnclaimedPayoutReserve;
+- UnclaimedPayoutReserve не является доходом платформы и не попадает в jackpot автоматически;
+- повторная выдача из UnclaimedPayoutReserve возможна только через отдельный reissueRoot, legal/compliance check, reasonCode и multisig 2 из 3.
+
+---
+
+## 9. Ordinary pool и jackpot: edge-cases
+
+Базовая экономика:
+
+```text
+80% handle -> ordinary prizePool
+10% handle -> platform fee
+10% handle -> jackpotContribution следующего тиража
+```
+
+Ключевое правило:
+
+```text
+jackpotContribution текущего тиража не добавляется к activeJackpot текущего тиража.
+```
+
+| Сценарий | Ordinary pool | Active jackpot | Jackpot contribution текущего тиража |
+|---|---|---|---|
+| Есть ordinary winners, нет 15/15 | распределяется по уровням 9/15-14/15 | переносится дальше | идет в следующий jackpot reserve |
+| Нет ordinary winners, нет 15/15 | неиспользованные доли уровней идут в следующий jackpot reserve | переносится дальше | идет в следующий jackpot reserve |
+| Есть 15/15 | 15/15 не получает ordinary pool; 9/15-14/15 распределяются отдельно | 90% activeJackpot выплачивается победителям 15/15, 10% переносится | идет в следующий jackpot reserve |
+| Несколько 15/15 | ordinary pool не платится 15/15 | 90% activeJackpot делится между winning 15/15 combinations, 10% переносится | идет в следующий jackpot reserve |
+| Draw cancelled до settlement | все купленные билеты refund | activeJackpot переносится дальше | не начисляется |
+| Один или несколько матчей void/postponed | если approved reduced draw возможен - применяется сокращенная сетка; иначе refund | если джекпотный уровень невозможен - activeJackpot переносится | зависит от правил reduced draw; при full refund не начисляется |
+| SourceMismatch | settlement запрещен | без изменений | не фиксируется до финального решения |
+| PayoutRoot ошибочный до активации | root заменяется новой версией | без изменений | без изменений |
+| PayoutRoot ошибочный после claims | оплаченные leaves не меняются; корректировка через compensating root | по incident rules | по incident rules |
+| Unclaimed ordinary/jackpot payout | после deadline уходит в UnclaimedPayoutReserve | не становится jackpot автоматически | не меняется |
+| Gas shortage | выплаты не уменьшаются | без изменений | без изменений |
+
+---
+
+## 10. Anti-whale enforcement
+
+Проверки делятся на три уровня.
+
+| Уровень | Что проверяет | Можно ли доверять как единственной защите |
+|---|---|---|
+| Preview | lineCount, ticketPrice, warnings, примерный exposure | нет |
+| Quote backend | wallet exposure, draw exposure, max combinations, max ticket amount, velocity, риск полного покрытия | да, как основной risk engine до покупки |
+| Contract | signature, quoteId, expiry, allowed asset, sales window, lineCount, total price, per-ticket hard limits, replay protection | да, как обязательный hard gate |
+
+wallet exposure:
+
+```text
+walletExposure(drawId, wallet) =
+  сумма ticketPrice по активным coupons wallet в draw
+  + сумма combinationsCount по активным coupons wallet в draw
+  + оценка доли покрытия пространства комбинаций
+```
+
+Для MVP backend считает exposure как верхнюю оценку:
+
+- по wallet address;
+- по risk identity, если доступно и юридически допустимо;
+- по сумме билетов;
+- по сумме комбинаций;
+- по частоте покупок;
+- по близости к full coverage.
+
+Частично исчерпанный лимит:
+
+- backend не делает частичную покупку автоматически;
+- quote возвращает отказ и remainingLimit;
+- пользователь должен уменьшить stake или количество комбинаций и запросить новый quote;
+- contract принимает только тот quote, который полностью соответствует подписанным значениям.
+
+Минимальные hard limits MVP:
+
+| Лимит | Где проверяется |
+|---|---|
+| max combinations per ticket | preview, quote, contract |
+| max ticket amount | preview, quote, contract |
+| max wallet amount per draw | quote, желательно contract |
+| max wallet combinations per draw | quote |
+| max full coverage behavior | quote, contract для per-ticket |
+| quote expiry | contract |
+| quote replay | contract |
+
+B2B-совместимость quote:
+
+- signed quote должен содержать `operatorId` или `DIRECT_OX`, если пользователь пришел напрямую;
+- signed quote должен содержать `partnerId`, если покупка связана с партнерской атрибуцией;
+- signed quote должен содержать `jurisdictionId`, `licenseScope` и `poolScope`;
+- contract хранит/эмитит только технические идентификаторы или hash, без персональных данных игрока;
+- backend не выдает quote, если operator/jurisdiction/poolScope не разрешены для draw;
+- оператор или партнер не может сам подписывать quote, если это не отдельный post-MVP режим с утвержденным delegated signer.
+
+---
+
+## 11. MVP security model
+
+Роли:
+
+| Роль | Минимальное право |
+|---|---|
+| DEFAULT_ADMIN | управление ролями через multisig |
+| DRAW_OPERATOR | создать, открыть, закрыть draw |
+| RESULT_PUBLISHER | публиковать resultRoot до финализации |
+| RESULT_FINALIZER | финализировать resultVersion |
+| ROOT_PUBLISHER | публиковать payoutRoot/refundRoot |
+| ROOT_ACTIVATOR | активировать root после проверки |
+| EXECUTOR | вызывать claimFor |
+| PAUSER | ставить pause по зоне |
+| TREASURY_ACCOUNTANT | учет 80/10/10 по правилам, без произвольного вывода пользовательских средств |
+| AUDITOR_READONLY | read-only доступ к админке и логам |
+
+Multisig assumptions:
+
+- mainnet MVP: минимум multisig 2 из 3 для DEFAULT_ADMIN, manual fallback result, root activation и emergency correction;
+- signer keys разделяются по ролям;
+- ResultPublisher, RootPublisher и Executor не должны быть одним ключом;
+- Executor не должен иметь admin/root/result права.
+
+Pauser powers:
+
+- может остановить покупку;
+- может остановить публикацию результата;
+- может остановить активацию root;
+- может остановить claim/claimFor;
+- не может вывести средства;
+- не может изменить результат;
+- не может изменить payoutRoot;
+- обязан указать reasonCode.
+
+Upgrade policy:
+
+```text
+MVP-контракты non-upgradeable.
+Upgradeable proxy переносится после MVP и требует отдельного решения, аудита, timelock, multisig и публичных событий.
+```
+
+Trusted components MVP:
+
+- trusted quote signer;
+- trusted result publisher, ограниченный финализацией и multisig;
+- trusted root publisher, ограниченный root review и activation;
+- trusted executor, ограниченный claimFor.
+
+Ограничения операторов для будущей B2B/B2B2C-модели:
+
+- оператор не может менять события тиража;
+- оператор не может менять comboPrice, activeJackpot, resultRoot или payoutRoot;
+- оператор не может запускать settlement;
+- оператор не может удержать valid payout, если право на выплату опубликовано и нет объективной блокировки;
+- оператор получает только разрешенные API, отчеты, виджет и reconciliation data;
+- локальный compliance/KYC оператора учитывается backend-ом до signed quote и перед payout status, но не заменяет on-chain source of truth.
+
+---
+
+## 12. Каноническая модульная схема MVP
+
+Обязательные on-chain модули MVP:
+
+```text
+DrawManager
+TicketVault
+TreasuryVault
+ResultRegistry
+PayoutVault
+AccessControl / EmergencyController
+```
+
+Ответственность:
+
+| Модуль | Storage boundary | Основная ответственность |
+|---|---|---|
+| DrawManager | draw params, draw state, sales windows | жизненный цикл тиража |
+| TicketVault | tickets, selections commitment, purchase events | покупка и фиксация билетов |
+| TreasuryVault | handle, prizePool, platformFee, jackpot reserve, gas reserve | учет средств и запрет произвольного вывода |
+| ResultRegistry | resultRoot, resultVersion, appeal state, final flag | финальность результатов |
+| PayoutVault | payoutRoot, refundRoot, claimed bitmap, claim windows | выплаты и refund через Merkle proof |
+| AccessControl / EmergencyController | roles, pause flags, reason codes | безопасность и аварийные режимы |
+
+Минимальные интерфейсы:
+
+- TicketVault проверяет DrawManager перед покупкой;
+- TicketVault передает средства в TreasuryVault;
+- ResultRegistry требует LOCKED draw;
+- PayoutVault требует RESULT_FINAL;
+- PayoutVault требует funding/allowance от TreasuryVault;
+- Executor работает только с PayoutVault;
+- Indexer читает события всех модулей.
+
+Post-MVP модули:
+
+- OperatorGateway;
+- OperatorRegistry;
+- PoolRouter;
+- OperatorReconciliationService;
+- отдельный JackpotVault;
+- Chainlink CRE receiver;
+- PartnerPayoutVault;
+- Governance module;
+- Token module;
+- Upgrade manager.
+
+---
+
+## 13. Канонический API-контракт frontend/backend
+
+Backend API обязан одинаково обслуживать frontend, admin panel, indexer read-model и executor.
+
+Минимальные endpoints MVP:
+
+| Endpoint | Назначение |
+|---|---|
+| GET /draws/current | текущий draw, state, sales window, events, jackpot |
+| POST /coupons/preview | lineCount, price, warnings, visible risk |
+| POST /coupons/quote | signed quote для покупки |
+| GET /coupons/{ticketId} | билет, selections, status, txHash |
+| GET /users/{wallet}/coupons | история пользователя |
+| GET /draws/{drawId}/results | result state, resultVersion, appeal window |
+| GET /draws/{drawId}/jackpot | activeJackpot, nextJackpot estimate |
+| GET /payouts/{ticketId}/claimability | canAutoClaim, canManualClaim, reason |
+| GET /payouts/{ticketId}/proof | Merkle proof для claim/claimFor |
+| GET /executor/status | executor state, gas state, queue lag |
+| GET /payouts/{ticketId}/status | payout status, txHash, retries |
+
+B2B/B2B2C compatibility endpoints:
+
+| Endpoint | Назначение |
+|---|---|
+| GET /operators/{operatorId}/draws/current | текущий draw для конкретного оператора |
+| POST /operators/{operatorId}/coupons/quote | quote с operatorId/jurisdictionId/poolScope |
+| GET /operators/{operatorId}/tickets/{ticketId} | статус билета в операторском контуре |
+| GET /operators/{operatorId}/reconciliation/{drawId} | сверка оборота, выплат, refund и комиссии |
+
+Эти endpoints могут быть закрытыми/internal в MVP. Их наличие в контракте API нужно как совместимость, а не как обязательный публичный операторский кабинет.
+
+Обязательные общие поля:
+
+- drawId;
+- drawState;
+- resultVersion;
+- payoutRootVersion;
+- ticketId;
+- wallet;
+- asset;
+- lineCount;
+- ticketPrice;
+- claimability;
+- payoutStatus;
+- executorStatus;
+- operatorId;
+- partnerId;
+- jurisdictionId;
+- licenseScope;
+- poolScope;
+- poolId;
+- reasonCode, если действие заблокировано.
+
+Правило:
+
+```text
+Frontend не должен обещать выплату, если claimability != claimable.
+Backend не должен выдавать proof, если payoutRoot не активен.
+Executor не должен делать claimFor, если proof API или chain state расходятся.
+```
+
+---
+
+## 14. Что входит в MVP и что переносится после MVP
+
+Обязательное MVP:
+
+- Суперэкспресс 15;
+- Base + native USDC;
+- одиночные билеты и системные ставки с лимитами;
+- модульная on-chain архитектура;
+- 80/10/10 экономика;
+- activeJackpot с правилом "текущий jackpotContribution идет в следующий тираж";
+- result aggregator с 3 источниками;
+- manual fallback результата только через multisig;
+- resultRoot/resultManifestHash;
+- payoutRoot/refundRoot;
+- Merkle claim и claimFor;
+- automatic executor;
+- fallback claim;
+- gas reserve;
+- anti-whale quote/risk layer;
+- B2B-совместимые поля operatorId/partnerId/jurisdictionId/licenseScope/poolScope в quote, ticket, manifest, analytics и audit log;
+- admin panel;
+- audit log;
+- indexer replay/reorg recovery;
+- security tests и внешний аудит перед mainnet.
+
+Желательно, но не блокирует MVP:
+
+- internal operator/reconciliation report без внешнего кабинета;
+- автоматизированный gas reimbursement;
+- расширенная продуктовая аналитика;
+- расширенный партнерский кабинет;
+- красивые публичные proof pages;
+- расширенная локализация;
+- больше executor wallets.
+
+Post-MVP:
+
+- Operator Gateway API/SDK/widget для лицензированных операторов;
+- операторский кабинет;
+- operator reconciliation automation;
+- country/operator/license-segregated pools, если юристы запретят единый global pool;
+- Мегаэкспресс 16;
+- Chainlink CRE;
+- отдельный JackpotVault;
+- полноценный RevShare;
+- токен OX;
+- DEX/listing/token;
+- high-stakes mode;
+- public bug bounty;
+- мобильные приложения;
+- governance;
+- upgradeable proxy.
+
+---
+
+## 15. Финальное решение
+
+Для разработки OX MVP каноническая модель такая:
+
+```text
+Смарт-контракты не считают победителей перебором.
+Backend считает settlement и строит Merkle.
+Контракт проверяет утвержденный root и право на выплату.
+Executor исполняет выплаты за пользователя.
+Indexer только читает и сверяет.
+```
+
+Архитектурная база MVP:
+
+```text
+DrawManager + TicketVault + TreasuryVault + ResultRegistry + PayoutVault + AccessControl/EmergencyController
+```
+
+Главные запреты:
+
+- не смешивать текущий jackpotContribution с activeJackpot текущего тиража;
+- не давать executor права root/result/admin;
+- не давать оператору или партнеру права менять draw/result/root/settlement;
+- не запускать payout до финального resultRoot;
+- не строить payoutRoot до settlement report;
+- не менять активированный payoutRoot обычным путем;
+- не считать backend DB источником истины по деньгам;
+- не использовать prizePool или jackpot для gas;
+- не исполнять KYC/compliance blocked payouts через claim/claimFor до снятия объективной блокировки.
+
+Решение по B2B-переходу:
+
+```text
+MVP строится как OX Core, пригодный для прямого запуска.
+Все пользовательские деньги, билеты, roots и выплаты остаются в канонической модели OX.
+Будущий B2B/B2B2C слой подключается через operator metadata, OperatorGateway и reconciliation, а не через переписывание экономики или контрактной логики.
+```

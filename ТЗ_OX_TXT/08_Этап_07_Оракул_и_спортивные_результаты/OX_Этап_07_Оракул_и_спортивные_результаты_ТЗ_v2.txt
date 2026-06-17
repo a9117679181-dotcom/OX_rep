@@ -278,6 +278,18 @@ createdAt
 lockedAt
 ```
 
+B2B/B2B2C-совместимые поля draw-level manifest:
+
+```text
+poolScope
+poolId
+allowedOperatorSetHash
+allowedJurisdictionSetHash
+allowedLicenseScopeHash
+```
+
+Эти поля не меняют спортивный результат, но фиксируют, какие операторы, юрисдикции и тип пула были допущены к тиражу. Если позже юридически потребуется COUNTRY_POOL, OPERATOR_POOL или LICENSE_POOL вместо GLOBAL_POOL, result/settlement pipeline не должен ломаться.
+
 Для стартового продукта:
 
 ```text
@@ -594,7 +606,7 @@ resultManifestHash
 finalizedAt
 ```
 
-`resultManifest` хранится off-chain (вне блокчейна). Для MVP целевым минимумом является публикация `manifestHash` или `resultRoot` в смарт-контракте, если это входит в объем этапа смарт-контрактов. Если публикация в блокчейн переносится после MVP, backend все равно обязан хранить manifest, hash, версии и audit log.
+`resultManifest` хранится off-chain (вне блокчейна). Для канонического MVP публикация `resultRoot/resultManifestHash` в смарт-контракте обязательна. Более ранний вариант с переносом on-chain публикации после MVP закрыт этапом смарт-контрактов и канонической архитектурой: без on-chain root нельзя обеспечить публично проверяемую связь результатов, settlement и выплат.
 
 Почему полностью убирать result hash/root из ТЗ нельзя:
 
@@ -758,6 +770,11 @@ errorCode
 drawId
 resultVersion
 events[]
+poolScope
+poolId
+allowedOperatorSetHash
+allowedJurisdictionSetHash
+allowedLicenseScopeHash
 validEventsCount
 voidEventsCount
 drawResultStatus
