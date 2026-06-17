@@ -1,0 +1,183 @@
+status: "research_package_not_legal_opinion"
+jurisdiction: "Nigeria"
+date: "2026-06-11"
+reviewed_by_local_lawyer: false
+
+product_frame:
+  no_direct_players_in_regulated_countries: "ASSUMPTION: OX не принимает игроков напрямую в регулируемых странах."
+  b2b_b2b2c_model: "ASSUMPTION: OX работает как B2B/B2B2C-инфраструктура через локально лицензированных операторов."
+  local_operator_role: "ASSUMPTION: локальный оператор дает игроков, локальную лицензионную рамку, локальный маркетинг и отношения с пользователем."
+  ox_role: "ASSUMPTION: OX дает технологию, общий пул, смарт-контракт, выбор событий, расчет выплат, аудит и операционное сопровождение."
+  key_legal_question: "B2B supplier/software provider vs фактический gambling co-operator / remote operator / pool operator."
+  main_risk: "Единый трансграничный global pool."
+  main_research_question: "Можно ли делать один глобальный пул или нужны country/operator/license-segregated sub-pools."
+
+ratings:
+  overall:
+    level: "critical"
+    classification: "UNCLEAR"
+    rationale: "Nigeria has regulated betting/lottery routes, but post-2024 federal/state competence, OX global pool, USDC, supplier/co-operator status and tax remain unresolved."
+    sources: ["NGA-GAM-001", "NGA-QA-001", "NGA-QA-002", "NGA-SEC-002", "NGA-SCUML-001", "NGA-NDPC-002"]
+  source_quality:
+    level: "high"
+    classification: "UNCLEAR"
+    rationale: "Gaming-law analysis relies heavily on one secondary guide; official NLRC/state rules, official Supreme Court judgment and official tax sources were not retrieved."
+    sources: ["NGA-GAM-001", "NGA-GAP-001", "NGA-QA-001", "NGA-QA-002"]
+  current_law_volatility:
+    level: "critical"
+    classification: "LIKELY"
+    rationale: "Secondary sources report the 22 November 2024 Supreme Court decision invalidating the National Lottery Act and materially changing federal/state regulatory authority."
+    sources: ["NGA-QA-001", "NGA-QA-002"]
+  product_classification:
+    level: "medium_high"
+    classification: "UNCLEAR"
+    rationale: "Sports betting and totalisator/pool features are likely, but lottery-like jackpot classification requires local counsel."
+    sources: ["NGA-GAM-001"]
+  b2b_supplier_vs_co_operator:
+    level: "high"
+    classification: "UNCLEAR"
+    rationale: "External software model is plausible, but OX controls events, rules, pool, smart contract and payout calculation."
+    sources: ["NGA-GAM-001"]
+  local_operator_license_coverage:
+    level: "high"
+    classification: "UNCLEAR"
+    rationale: "A licensed operator may be able to integrate approved software, but there is no source confirming that its licence covers OX control of global pool, smart contract, event selection and payout calculation."
+    sources: ["NGA-GAM-001"]
+  ox_local_licence_or_approval:
+    level: "high"
+    classification: "UNCLEAR"
+    rationale: "Remote Operator Permit or supplier/vendor approval may be needed depending on OX role."
+    sources: ["NGA-GAM-001"]
+  global_pool:
+    level: "critical"
+    classification: "UNKNOWN"
+    rationale: "No source found permitting Nigerian players in a cross-border shared jackpot pool."
+    sources: []
+  country_operator_license_segregated_sub_pools:
+    required: "recommended_as_conservative_fallback_not_verified_legal_requirement"
+    classification: "UNCLEAR"
+    rationale: "Segregated pool is a risk-control recommendation because global pool is unsupported; no source confirms it is legally sufficient or mandatory."
+    sources: ["NGA-GAM-001", "NGA-QA-001", "NGA-QA-002"]
+  crypto_usdc:
+    level: "critical"
+    classification: "UNCLEAR"
+    rationale: "No source found allowing USDC gambling tickets/payouts; VASP analysis is current-law-sensitive because ISA 2025 and 2026 SEC circulars may supplement the 2022 Digital Asset Rules."
+    sources: ["NGA-GAM-001", "NGA-SEC-002", "NGA-SEC-003", "NGA-SEC-005", "NGA-SEC-006", "NGA-QA-003"]
+  smart_contract_custody:
+    level: "high"
+    classification: "UNKNOWN"
+    rationale: "No gaming source found approving smart-contract custody/settlement for player funds."
+    sources: ["NGA-SEC-002"]
+  kyc_aml_sanctions:
+    level: "medium_high"
+    classification: "LIKELY"
+    rationale: "SCUML/DNFBP framework and sanctions screening are verified generally; gaming-specific risk-based KYC conclusion relies partly on secondary gaming-law material."
+    sources: ["NGA-GAM-001", "NGA-SCUML-001"]
+  responsible_gambling:
+    level: "medium"
+    classification: "LIKELY"
+    rationale: "Responsible gambling controls are expected for betting/gaming licensees."
+    sources: ["NGA-GAM-001"]
+  advertising:
+    level: "medium_high"
+    classification: "LIKELY"
+    rationale: "ARCON rules apply to Nigerian-directed advertising generally; exact approval/disclosure treatment for OX global jackpot and affiliates needs gaming-specific confirmation."
+    sources: ["NGA-ARCON-001"]
+  tax:
+    level: "high"
+    classification: "UNKNOWN"
+    rationale: "Gaming tax relevance exists, but exact GGR/turnover/VAT/WHT allocation for OX was not verified from primary tax sources."
+    sources: ["NGA-GAM-001"]
+  data_protection:
+    level: "medium_high"
+    classification: "VERIFIED"
+    rationale: "NDPA applies to Nigerian data subjects; cross-border transfer safeguards are required."
+    sources: ["NGA-NDPC-001", "NGA-NDPC-002"]
+  revenue_share:
+    level: "medium_high"
+    classification: "UNCLEAR"
+    rationale: "Revenue share may support co-operator characterization and has unresolved tax/licence implications."
+    sources: ["NGA-GAM-001"]
+
+launch_position:
+  status: "research_more"
+  possible_conditional_go: true
+  conditions:
+    - "Local counsel confirms exact federal/state licence path for local operator."
+    - "Regulator/local counsel confirms whether OX needs supplier/software/platform/vendor/remote operator approval."
+    - "Product approval covers SuperExpress 15, jackpot, pool mechanics, payout rules and software."
+    - "Global pool is either approved or replaced by Nigeria/operator/licence-segregated sub-pool."
+    - "USDC flow is either approved through gaming + SEC/VASP + banking analysis or replaced by locally approved payment rails."
+    - "KYC/AML/SCUML/sanctions workflow is documented."
+    - "ARCON/gaming advertising approval process is documented."
+    - "Tax allocation is confirmed."
+    - "Data processing and cross-border transfer safeguards are executed."
+    - "Smart-contract audit, payout certification and bug/shortfall liability are contractually allocated."
+  blockers:
+    - "No confirmation for cross-border global pool."
+    - "No confirmation for USDC gambling tickets/payouts."
+    - "No confirmation of OX supplier vs co-operator status."
+    - "No official Supreme Court judgment/current state-by-state licensing map in the file."
+    - "No primary tax source for gaming/VAT/WHT/platform fee allocation."
+
+source_evidence:
+  primary_sources:
+    - "NGA-SEC-001"
+    - "NGA-SEC-002"
+    - "NGA-SEC-003"
+    - "NGA-SEC-004"
+    - "NGA-SCUML-001"
+    - "NGA-NDPC-001"
+    - "NGA-NDPC-002"
+    - "NGA-ARCON-001"
+  secondary_sources:
+    - "NGA-GAM-001"
+    - "NGA-QA-001"
+    - "NGA-QA-002"
+  lawyer_confirmation:
+    required: true
+    status: "not_obtained"
+
+open_questions:
+  - "What is the current effect of the 22 November 2024 Supreme Court decision on federal/state gaming regulation?"
+  - "Can Nigerian players join a cross-border global jackpot pool?"
+  - "Can USDC be used for ticket purchase and payout?"
+  - "Does OX need a direct Nigerian licence or approval?"
+  - "What exact state/federal approvals apply to the selected local operator?"
+  - "What gaming tax/VAT/WHT treatment applies to OX revenue share/platform fee?"
+
+quality_audit:
+  completed: true
+  date: "2026-06-11"
+  key_weaknesses:
+    - "Gambling-law analysis is under-sourced with primary official materials."
+    - "ICLG is reputable but secondary; it cannot support VERIFIED gaming conclusions by itself."
+    - "Post-2024 Supreme Court federal/state regulatory effect is not fully integrated without official judgment."
+    - "Global pool remains UNKNOWN."
+    - "USDC gambling flow remains UNCLEAR/UNKNOWN."
+    - "Local operator licence coverage for OX-controlled pool/settlement remains UNCLEAR."
+    - "SEC digital asset analysis must be refreshed under ISA 2025 and 2026 SEC circulars."
+    - "CBN VASP banking guidance was not verified from an official accessible source."
+    - "Tax section has no primary FIRS/NRS source."
+    - "Several partner-agreement recommendations are risk controls, not verified legal requirements."
+  downgrades:
+    - field: "overall.level"
+      from: "high"
+      to: "critical"
+      reason: "Source gaps plus federal/state volatility after Supreme Court decision."
+    - field: "local_operator_license_coverage.classification"
+      from: "LIKELY"
+      to: "UNCLEAR"
+      reason: "External software integration does not prove licence coverage for OX global pool/control functions."
+    - field: "country_operator_license_segregated_sub_pools.classification"
+      from: "LIKELY"
+      to: "UNCLEAR"
+      reason: "Segregated pool is a fallback recommendation, not verified legal requirement."
+    - field: "kyc_aml_sanctions.classification"
+      from: "VERIFIED"
+      to: "LIKELY"
+      reason: "Gaming-specific AML treatment relies partly on secondary source."
+    - field: "advertising.classification"
+      from: "VERIFIED"
+      to: "LIKELY"
+      reason: "ARCON general rule is verified, but exact OX jackpot/affiliate application requires confirmation."

@@ -1,0 +1,963 @@
+# OX - Этап 09. Сервер, индексатор и служба выплат
+
+Дата: 09.06.2026  
+Версия: v1  
+Проект: OX, спортивный экспресс  
+Стартовый продукт: Суперэкспресс 15  
+Будущий продукт: Мегаэкспресс 16  
+Девиз: Честно. Прозрачно. Мгновенно.
+
+---
+
+## 1. Назначение этапа
+
+Этап 9 описывает backend architecture (серверную архитектуру) OX: API, базу данных, индексатор блокчейн-событий, фоновые задачи, settlement engine, Merkle builder, payout executor, мониторинг и внутренние сервисы.
+
+Этот этап отвечает на вопросы:
+
+- какие серверные модули нужны для MVP;
+- как хранить тиражи, билеты, результаты, выплаты и логи;
+- как синхронизировать блокчейн с базой данных;
+- как рассчитывать победителей;
+- как строить Merkle tree и Merkle proof;
+- как executor отправляет автоматические выплаты;
+- как API обслуживает сайт и админ-панель;
+- какие jobs (фоновые задачи) нужны;
+- как работает мониторинг и алерты;
+- как защищать API-ключи, роли и данные.
+
+Связь с предыдущими этапами:
+
+- Этап 2 определяет жизненный цикл тиража.
+- Этап 3 определяет билеты и системные ставки.
+- Этап 4 определяет призовой фонд, джекпот и refund.
+- Этап 5 определяет risk engine против кита.
+- Этап 6 определяет автоматические выплаты.
+- Этап 7 определяет оракул и спортивные результаты.
+- Этап 8 определяет смарт-контракты.
+
+Главное правило:
+
+```text
+backend выполняет тяжелую off-chain логику, но деньги и неизменяемые правила защищаются смарт-контрактами.
+```
+
+---
+
+## 2. Архитектурное решение MVP
+
+Для MVP фиксируется модульная backend-схема:
+
+```text
+API Gateway
+Application API
+Admin API
+Database
+Blockchain Indexer
+Oracle Service
+Risk Engine
+Settlement Engine
+Merkle Builder
+Payout Executor
+Job Queue
+Monitoring & Alerting
+Audit Log
+```
+
+| Модуль | Назначение |
+|---|---|
+| API Gateway | входная точка API, rate limit, auth |
+| Application API | API для пользовательского интерфейса |
+| Admin API | API для админ-панели |
+| Database | основное хранилище данных |
+| Blockchain Indexer | чтение событий смарт-контрактов |
+| Oracle Service | работа со спортивными API |
+| Risk Engine | расчет цены и риска кита |
+| Settlement Engine | расчет победителей |
+| Merkle Builder | построение Merkle tree/proofs |
+| Payout Executor | автоматические выплаты claimFor |
+| Job Queue | очереди фоновых задач |
+| Monitoring & Alerting | мониторинг и алерты |
+| Audit Log | неизменяемый журнал действий |
+
+---
+
+## 3. Рекомендуемый технологический стек
+
+Финальный стек выбирается перед разработкой, но для ТЗ фиксируем практичный ориентир:
+
+```text
+Backend: Node.js / TypeScript или другой согласованный стек
+Database: PostgreSQL
+Cache/Queue: Redis + queue worker или managed queue
+Blockchain: ethers / viem
+Object storage: S3-compatible storage
+Monitoring: logs + metrics + alerts
+```
+
+Почему PostgreSQL:
+
+- надежная транзакционная база;
+- хорошо подходит для финансовых записей;
+- поддерживает индексы, JSONB, миграции;
+- удобно хранить audit log и состояния.
+
+Почему отдельная очередь:
+
+- выплаты нельзя отправлять синхронно из пользовательского запроса;
+- jobs должны повторяться безопасно;
+- сбой одного процесса не должен останавливать всю систему.
+
+Важно:
+
+```text
+конкретные версии библиотек фиксируются перед стартом разработки и security review.
+```
+
+---
+
+## 4. Основные доменные сущности
+
+Минимальные сущности:
+
+```text
+User
+Wallet
+Draw
+SportEvent
+ProviderEventMapping
+Ticket
+TicketSelection
+RiskReport
+ProviderResultObservation
+DrawResultManifest
+Appeal
+Settlement
+PayoutManifest
+PayoutLeaf
+PayoutProof
+PayoutJob
+RefundJob
+BlockchainEvent
+AuditLog
+AdminAction
+ProviderHealth
+SystemAlert
+```
+
+---
+
+## 5. База данных
+
+### 5.1. Требования
+
+База данных должна обеспечивать:
+
+- транзакционность;
+- уникальность ticketId;
+- уникальность payout leaf;
+- историю статусов;
+- восстановление после сбоя;
+- индексацию blockchain events;
+- хранение audit logs;
+- хранение hash/root;
+- резервное копирование.
+
+### 5.2. Draw
+
+```text
+drawId
+productType
+eventsCount
+status
+comboPrice
+activeJackpot
+salesOpenAt
+salesCloseAt
+appealWindowStartsAt
+appealWindowEndsAt
+payoutTimelockEndsAt
+validEventsCount
+resultVersion
+payoutRootVersion
+createdAt
+updatedAt
+```
+
+### 5.3. Ticket
+
+```text
+ticketId
+drawId
+buyerAddress
+ticketHash
+selectionsJson
+combinationsCount
+stakePerCombination
+ticketPrice
+txHash
+blockNumber
+status
+createdAt
+```
+
+Правило:
+
+```text
+ticketHash в базе должен совпадать с ticketHash из события TicketPurchased.
+```
+
+### 5.4. PayoutManifest
+
+```text
+drawId
+rootVersion
+manifestHash
+payoutRoot
+totalAmount
+validEventsCount
+status
+createdAt
+publishedAt
+activatedAt
+```
+
+### 5.5. PayoutLeaf
+
+```text
+drawId
+rootVersion
+leafIndex
+userAddress
+tokenAddress
+amount
+ticketId
+claimDeadline
+leafHash
+proofJson
+status
+txHash
+claimedAt
+```
+
+### 5.6. AuditLog
+
+```text
+auditId
+actorType
+actorId
+actionType
+entityType
+entityId
+beforeHash
+afterHash
+reasonCode
+ipAddress
+createdAt
+```
+
+Предварительный срок хранения:
+
+```text
+minimumAuditRetention = 5 лет
+```
+
+Финально подтверждается юридическим этапом.
+
+---
+
+## 6. Blockchain Indexer
+
+Indexer (индексатор) читает события смарт-контрактов и синхронизирует их с базой.
+
+Индексируемые события:
+
+```text
+DrawCreated
+DrawPrepared
+ComboPriceUpdated
+DrawOpened
+DrawLocked
+DrawPaused
+DrawResumed
+DrawCancelled
+TicketPurchased
+TreasuryAccounted
+GasReserveAccounted
+JackpotLocked
+ResultRootPublished
+ResultRootFinalized
+ResultRootCancelled
+PayoutRootPublished
+PayoutsActivated
+PayoutClaimed
+RefundClaimed
+PayoutPaused
+PayoutResumed
+```
+
+Требования:
+
+- хранить blockNumber, txHash, logIndex;
+- обеспечивать idempotency (повторная обработка события не ломает состояние);
+- учитывать reorg (перестройку блоков);
+- сверять события с ожидаемым состоянием базы;
+- поднимать alert при расхождении;
+- уметь reindex (переиндексацию) с заданного блока.
+
+Правило:
+
+```text
+blockchain event is source of truth for on-chain state
+```
+
+Но:
+
+```text
+off-chain расчеты должны сверяться с on-chain событиями перед выплатами.
+```
+
+---
+
+## 7. API для пользовательского интерфейса
+
+Минимальные endpoints:
+
+```text
+GET /draws/current
+GET /draws/{drawId}
+GET /draws/{drawId}/events
+GET /draws/{drawId}/tickets/{ticketId}
+GET /users/{address}/tickets
+GET /users/{address}/draws/{drawId}/tickets
+GET /draws/{drawId}/results
+GET /draws/{drawId}/payouts/{leafIndex}/proof
+GET /users/{address}/draws/{drawId}/payouts
+GET /draws/{drawId}/public-report
+```
+
+Публичный API должен отдавать:
+
+- статус тиража;
+- список событий;
+- цену комбинации;
+- активный джекпот;
+- результат;
+- статус апелляции;
+- статус выплаты;
+- Merkle proof для пользователя;
+- публичные hash/root;
+- понятный отчет по тиражу.
+
+Публичный API не должен отдавать:
+
+- API-ключи провайдеров;
+- внутренние raw payload, если запрещено лицензией;
+- полный risk report, если он помогает киту;
+- персональные данные;
+- admin-only поля.
+
+---
+
+## 8. Admin API
+
+Минимальные endpoints:
+
+```text
+POST /admin/draws
+POST /admin/draws/{drawId}/prepare
+POST /admin/draws/{drawId}/open
+POST /admin/draws/{drawId}/lock
+POST /admin/draws/{drawId}/pause
+POST /admin/draws/{drawId}/resume
+POST /admin/draws/{drawId}/cancel
+
+POST /admin/draws/{drawId}/events
+POST /admin/events/{eventId}/provider-mapping
+
+GET /admin/risk/draws/{drawId}
+POST /admin/risk/draws/{drawId}/recalculate
+
+GET /admin/oracle/runs
+GET /admin/providers/health
+POST /admin/events/{eventId}/manual-result-proposal
+POST /admin/manual-result-proposals/{proposalId}/approve
+POST /admin/manual-result-proposals/{proposalId}/reject
+
+POST /admin/draws/{drawId}/settlement/build
+POST /admin/draws/{drawId}/payout-root/build
+POST /admin/draws/{drawId}/payout-root/publish
+
+GET /admin/payouts/queue
+POST /admin/payouts/{payoutJobId}/retry
+POST /admin/payouts/pause
+POST /admin/payouts/resume
+```
+
+Все admin endpoints должны:
+
+- требовать авторизацию;
+- проверять роль;
+- писать audit log;
+- для критических действий требовать multisig workflow;
+- иметь reasonCode;
+- быть идемпотентными там, где возможно.
+
+---
+
+## 9. Oracle Service
+
+Oracle Service реализует этап 7.
+
+Функции:
+
+- загрузка потенциальных событий;
+- provider mapping;
+- опрос primary API;
+- опрос backup API 1;
+- опрос backup API 2;
+- нормализация результата;
+- consensus rules;
+- manual fallback;
+- сохранение raw payload hash;
+- provider health;
+- quota monitoring.
+
+Jobs:
+
+```text
+EventDiscoveryJob
+MappingVerificationJob
+ResultPollingJob
+ConsensusJob
+AppealWindowJob
+ResultFinalizationJob
+ProviderHealthJob
+QuotaMonitorJob
+```
+
+Требование:
+
+```text
+settlement cannot start before FinalConfirmed result
+```
+
+---
+
+## 10. Risk Engine
+
+Risk Engine реализует этап 5.
+
+Функции:
+
+- расчет full coverage;
+- расчет coverageCost;
+- расчет netAttackCost;
+- расчет riskRatio;
+- расчет requiredComboPrice;
+- проверка activeJackpot;
+- проверка wallet limits;
+- контроль приближения к full coverage;
+- формирование risk report.
+
+Параметры:
+
+```text
+baseComboPrice = 3 USDC
+targetRiskRatio = 0.75
+triggerRiskRatio = 0.85
+hardRiskRatio = 1.00
+priceStep = 0.25 USDC
+```
+
+Правило:
+
+```text
+если riskRatio >= 1.00, draw cannot Open
+```
+
+Risk report должен сохраняться в базе и быть доступен в админ-панели.
+
+---
+
+## 11. Settlement Engine
+
+Settlement Engine рассчитывает победителей после финализации результатов.
+
+Входные данные:
+
+- tickets;
+- ticket selections;
+- final result manifest;
+- validEventsCount;
+- prize pool rules;
+- jackpot rules;
+- refund rules.
+
+Выходные данные:
+
+- settlement report;
+- winning combinations per ticket;
+- payout levels;
+- jackpot winners;
+- refund list;
+- payout manifest draft.
+
+Правила:
+
+- settlement нельзя запускать до FinalConfirmed;
+- settlement нельзя запускать при active appeal;
+- 15/15 jackpot считается только при validEventsCount = 15;
+- при 14/13 jackpot не разыгрывается;
+- при 3+ void events формируется refund;
+- payout amount нельзя менять после публикации payout root без отмены root и нового timelock.
+
+---
+
+## 12. Merkle Builder
+
+Merkle Builder строит payout manifest, Merkle tree и Merkle proof.
+
+Вход:
+
+- settlement report;
+- drawId;
+- rootVersion;
+- payout items;
+- refund items;
+
+Leaf:
+
+```text
+drawId
+rootVersion
+leafIndex
+userAddress
+tokenAddress
+amount
+ticketId
+claimDeadline
+```
+
+Выход:
+
+- payoutRoot;
+- manifestHash;
+- leafHash;
+- proof per leaf;
+- totalAmount;
+- rootVersion.
+
+Требования:
+
+- deterministic build (детерминированная сборка);
+- одинаковый вход всегда дает одинаковый root;
+- proof нельзя потерять;
+- manifest/proofs резервируются;
+- доступ к proof не позволяет изменить amount или recipient;
+- rootVersion увеличивается при пересборке.
+
+API proof:
+
+```text
+GET /draws/{drawId}/payouts/{leafIndex}/proof
+GET /users/{address}/draws/{drawId}/payouts
+```
+
+---
+
+## 13. Payout Executor
+
+Payout Executor отправляет автоматические выплаты за пользователя.
+
+Задачи:
+
+- читать ReadyForPayout;
+- получать Merkle proof;
+- проверять KYC/compliance статус;
+- проверять claimed через контракт или индексатор;
+- проверять gas reserve/executor wallet;
+- отправлять claimFor;
+- ждать подтверждение транзакции;
+- обновлять статус выплаты;
+- retry при временной ошибке;
+- переводить в ManualClaimAvailable после лимита попыток.
+
+Параметры MVP:
+
+```text
+maxAutoRetryCount = 5
+retryBackoff = 5m, 15m, 30m, 1h, 3h
+autoPayoutBatchWindow = 15m
+manualClaimAfterFailedRetries = true
+```
+
+Статусы job:
+
+| Статус | Значение |
+|---|---|
+| Queued | в очереди |
+| Processing | выполняется |
+| Submitted | транзакция отправлена |
+| Confirmed | подтверждена |
+| FailedRetryable | можно повторить |
+| FailedFinal | финальная ошибка |
+| BlockedKYC | ждет KYC |
+| AlreadyClaimed | уже получено |
+| ManualClaimAvailable | доступен ручной claim |
+
+Executor не должен:
+
+- менять сумму;
+- менять получателя;
+- обходить KYC;
+- публиковать payout root;
+- активировать выплаты;
+- иметь доступ к prizePool/jackpot/treasury.
+
+---
+
+## 14. Gas Reserve и executor wallet
+
+Backend должен учитывать:
+
+- gasReserve;
+- executor wallet balance;
+- gasCoverageRatio;
+- estimatedGasCost;
+- retry cost;
+- root publish cost;
+- claimFor cost.
+
+Если gasCoverageRatio < 1.0:
+
+```text
+payoutMode = GasPaused
+executor stops new automatic payouts
+critical alert
+platform replenishes gas reserve / executor wallet
+```
+
+Executor wallet:
+
+- используется только для газа;
+- имеет лимит баланса;
+- мониторится каждые 5 минут;
+- не имеет доступа к пользовательским средствам;
+- при низком балансе отправляет alert.
+
+---
+
+## 15. Job Queue
+
+Все тяжелые процессы должны выполняться через очередь.
+
+Основные очереди:
+
+```text
+oracleQueue
+indexerQueue
+riskQueue
+settlementQueue
+merkleQueue
+payoutQueue
+notificationQueue
+auditQueue
+```
+
+Требования:
+
+- retry policy;
+- dead letter queue (очередь мертвых задач);
+- idempotency key;
+- job timeout;
+- status tracking;
+- manual retry;
+- alert при накоплении очереди.
+
+---
+
+## 16. Monitoring и alerts
+
+Мониторинг должен отслеживать:
+
+- API availability;
+- provider quota;
+- RPC status;
+- indexer lag;
+- failed jobs;
+- payout queue length;
+- executor wallet balance;
+- gasCoverageRatio;
+- mismatch между базой и блокчейном;
+- lost proof risk;
+- active appeals;
+- manual fallback usage;
+- suspicious whale activity;
+- database backup status.
+
+Каналы алертов:
+
+- админ-панель;
+- Telegram/Slack или аналог;
+- email для критических инцидентов;
+- dashboard.
+
+Критические алерты:
+
+- payout root опубликован, но manifest отсутствует;
+- proof потерян;
+- executor отправляет повторный claim;
+- gasCoverageRatio < 1.0;
+- primary и backup API расходятся;
+- indexer отстал от сети;
+- база не прошла backup;
+- произошел ручной ввод результата.
+
+---
+
+## 17. Security
+
+Обязательные меры:
+
+- хранение API keys в secrets manager;
+- отсутствие секретов в репозитории;
+- role-based access control;
+- MFA для администраторов;
+- IP allowlist для критических admin endpoints, если применимо;
+- audit log всех admin actions;
+- rate limit публичного API;
+- защита от replay/idempotency ошибок;
+- проверка подписи wallet, если endpoint требует адрес пользователя;
+- разграничение executor и root publisher;
+- read-only режим для аудиторов.
+
+Запрещено:
+
+- отдавать API-ключи клиенту;
+- хранить приватный ключ executor в открытом виде;
+- менять payout amount после root;
+- пересобирать Merkle root без версии;
+- запускать settlement при спорных результатах;
+- удалять audit log вручную.
+
+---
+
+## 18. Backup и восстановление
+
+Нужно резервировать:
+
+- PostgreSQL database;
+- payout manifests;
+- Merkle proofs;
+- raw provider payload hash/storage;
+- audit logs;
+- configuration;
+- deployment metadata.
+
+Требования:
+
+- ежедневный backup;
+- проверка восстановления;
+- отдельное хранение критических manifest/proof;
+- журнал восстановления;
+- RPO/RTO определить перед запуском.
+
+Предварительно:
+
+```text
+RPO <= 24 часа
+RTO <= 4 часа для критических сервисов MVP
+```
+
+---
+
+## 19. API statuses
+
+API должен отдавать пользователю понятные статусы:
+
+```text
+DrawOpen
+DrawLocked
+ResultsUnderReview
+AppealActive
+SettlementPending
+PayoutsPending
+PayoutsActive
+Paid
+ManualClaimAvailable
+BlockedKYC
+RefundReady
+RefundPaid
+GasPaused
+```
+
+Внутренние технические статусы можно показывать только в админ-панели.
+
+---
+
+## 20. Admin workflows
+
+Критические workflow:
+
+- create draw;
+- prepare draw;
+- risk recalculation;
+- open draw;
+- lock draw;
+- manual result proposal;
+- appeal review;
+- result finalization;
+- settlement build;
+- payout root build;
+- payout root publish;
+- payout pause/resume;
+- manual retry;
+- incident handling.
+
+Каждый workflow должен иметь:
+
+- actor;
+- role check;
+- reasonCode;
+- audit log;
+- status;
+- timestamp;
+- related txHash, если есть;
+- multisig marker, если требуется.
+
+---
+
+## 21. Инварианты backend
+
+Backend должен соблюдать:
+
+```text
+ticketHash in DB == ticketHash on-chain
+```
+
+```text
+settlement cannot start before FinalConfirmed
+```
+
+```text
+payoutRoot cannot be built before settlement report
+```
+
+```text
+proof cannot change amount or recipient
+```
+
+```text
+executor cannot send claimFor without proof
+```
+
+```text
+paid status only after blockchain confirmation
+```
+
+```text
+same leaf cannot be paid twice
+```
+
+```text
+manual fallback must have audit log
+```
+
+```text
+admin cannot delete audit log
+```
+
+---
+
+## 22. Тестовые сценарии
+
+MVP должен пройти:
+
+1. Создание тиража через admin API.
+2. Покупка билета и индексация TicketPurchased.
+3. Расчет системного билета.
+4. Risk engine повышает comboPrice до Open.
+5. Oracle получает результат из 3 API.
+6. Outcome mismatch переводит событие в ManualReview.
+7. Апелляция блокирует settlement.
+8. Settlement считает победителей.
+9. Merkle Builder строит root и proof.
+10. Payout Executor отправляет claimFor.
+11. Пользователь сам сделал fallback claim до executor.
+12. Executor видит AlreadyClaimed.
+13. GasPaused останавливает автоматические выплаты.
+14. Refund при void.
+15. 14/13 без джекпота.
+16. Indexer пересинхронизируется после сбоя.
+17. Повторный запуск job не ломает состояние.
+18. Потеря provider API включает alert.
+19. Потеря proof считается критическим инцидентом.
+20. Audit log нельзя удалить через admin API.
+
+---
+
+## 23. Открытые вопросы
+
+| Вопрос | Куда переносится |
+|---|---|
+| Финальный backend stack | Старт разработки |
+| RPC provider | Инфраструктура |
+| Secrets manager | Инфраструктура / безопасность |
+| KYC provider | Комплаенс |
+| Notification provider | Инфраструктура |
+| Backup RPO/RTO | Инфраструктура |
+| Data retention по странам | Комплаенс |
+| Полный формат database schema | Backend development |
+
+---
+
+## 24. Критерии приемки
+
+Этап 9 считается согласованным, если:
+
+- описана backend architecture;
+- описана database model;
+- описан indexer;
+- описан API для пользователя;
+- описан Admin API;
+- описан Oracle Service;
+- описан Risk Engine;
+- описан Settlement Engine;
+- описан Merkle Builder;
+- описан Payout Executor;
+- описаны queues/jobs;
+- описаны monitoring/alerts;
+- описаны security requirements;
+- описаны backup requirements;
+- описаны тестовые сценарии.
+
+---
+
+## 25. Итоговое решение
+
+Для MVP принимается backend architecture:
+
+```text
+API + Database + Indexer + Oracle Service + Risk Engine + Settlement Engine + Merkle Builder + Payout Executor + Monitoring
+```
+
+Ключевые решения:
+
+- backend выполняет тяжелую off-chain логику;
+- смарт-контракты защищают деньги и проверяемые root/hash;
+- PostgreSQL подходит как базовая transactional database;
+- все тяжелые процессы идут через jobs/queues;
+- indexer синхронизирует on-chain state;
+- Merkle proof хранится и резервируется;
+- executor платит газ, но не имеет доступа к пользовательским средствам;
+- audit log обязателен;
+- мониторинг и алерты обязательны;
+- ручные действия должны быть видны и логироваться.
+
+Главный принцип:
+
+```text
+backend ускоряет и автоматизирует OX,
+но не должен иметь возможность незаметно изменить деньги, результаты или выплаты.
+```

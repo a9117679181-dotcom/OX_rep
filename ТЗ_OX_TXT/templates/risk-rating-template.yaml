@@ -1,0 +1,78 @@
+status: "template"
+not_legal_opinion: true
+jurisdiction: "TBD"
+date: "TBD"
+reviewed_by_local_lawyer: false
+
+product_frame:
+  no_direct_players_in_regulated_countries: "ASSUMPTION: OX не принимает игроков напрямую в регулируемых странах."
+  b2b_b2b2c_model: "ASSUMPTION: OX работает как B2B/B2B2C-инфраструктура через локально лицензированных операторов."
+  local_operator_role: "ASSUMPTION: локальный оператор дает игроков, локальную лицензионную рамку, локальный маркетинг и отношения с пользователем."
+  ox_role: "ASSUMPTION: OX дает технологию, общий пул, смарт-контракт, выбор событий, расчет выплат, аудит и операционное сопровождение."
+  key_legal_question: "Является ли OX просто B2B supplier/software provider или фактическим gambling co-operator."
+  main_risk: "Единый трансграничный global pool."
+  main_research_question: "Можно ли делать один глобальный пул или нужны country/operator/license-segregated sub-pools."
+
+ratings:
+  overall:
+    level: "TBD"
+    rationale: "TBD"
+  product_classification:
+    level: "TBD"
+    rationale: "TBD"
+  b2b_supplier_vs_co_operator:
+    level: "TBD"
+    rationale: "TBD"
+  local_operator_license_coverage:
+    level: "TBD"
+    rationale: "TBD"
+  global_pool:
+    level: "TBD"
+    rationale: "TBD"
+  country_operator_license_segregated_sub_pools:
+    required: "TBD"
+    rationale: "TBD"
+  crypto_usdc:
+    level: "TBD"
+    rationale: "TBD"
+  smart_contract_custody:
+    level: "TBD"
+    rationale: "TBD"
+  kyc_aml_sanctions:
+    level: "TBD"
+    rationale: "TBD"
+  responsible_gambling:
+    level: "TBD"
+    rationale: "TBD"
+  advertising:
+    level: "TBD"
+    rationale: "TBD"
+  tax:
+    level: "TBD"
+    rationale: "TBD"
+  data_protection:
+    level: "TBD"
+    rationale: "TBD"
+  revenue_share:
+    level: "TBD"
+    rationale: "TBD"
+
+launch_position:
+  status: "TBD" # go | conditional_go | no_go | prohibited | lawyer_review_required
+  conditions:
+    - "TBD"
+  blockers:
+    - "TBD"
+
+source_evidence:
+  primary_sources:
+    - id: "TBD"
+      title: "TBD"
+      url: "TBD"
+      relevance: "TBD"
+  lawyer_confirmation:
+    required: true
+    status: "TBD"
+
+open_questions:
+  - "TBD"

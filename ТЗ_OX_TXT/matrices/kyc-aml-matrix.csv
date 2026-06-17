@@ -1,0 +1,2 @@
+jurisdiction,risk_based_kyc,local_operator_can_do_kyc,ox_pseudonymous_id_only,aml_supervision,sanctions_screening,thresholds_status,position,key_sources
+Nigeria,VERIFIED,LIKELY,LIKELY_BUT_NOT_SUFFICIENT,"SCUML/DNFBP; SEC AML/CFT if VASP/digital asset activity",LIKELY,UNKNOWN,"Local operator should run KYC/AML, but OX needs enough risk flags and may have own obligations if it controls funds/transfers/payout decisions.","NGA-GAM-001; NGA-SCUML-001; NGA-SEC-002"

@@ -1,0 +1,888 @@
+# OX - Этап 08. Смарт-контракты
+
+Дата: 09.06.2026  
+Версия: v1  
+Проект: OX, спортивный экспресс  
+Стартовый продукт: Суперэкспресс 15  
+Будущий продукт: Мегаэкспресс 16  
+Девиз: Честно. Прозрачно. Мгновенно.
+
+---
+
+## 1. Назначение этапа
+
+Этап 8 описывает smart contracts (смарт-контракты) OX: состав контрактов, зоны ответственности, роли, функции, события, инварианты, ограничения и требования к аудиту.
+
+Этот этап отвечает на вопросы:
+
+- какие контракты нужны для MVP;
+- какие данные хранятся on-chain (в блокчейне);
+- какие расчеты остаются off-chain (вне блокчейна);
+- как принимаются USDC за билеты;
+- как фиксируются параметры тиража;
+- как учитываются призовой фонд, комиссия, джекпот и gas reserve;
+- как публикуются result root и payout root;
+- как выполняются выплаты через Merkle proof;
+- какие роли и права нужны;
+- какие действия требуют multisig;
+- какие проверки должны пройти контракты перед запуском.
+
+Связь с предыдущими этапами:
+
+- Этап 2 определяет жизненный цикл тиража и статусы.
+- Этап 3 определяет билеты, системные ставки и лимиты.
+- Этап 4 определяет экономику 80/10/10, джекпот, gas reserve и refund.
+- Этап 5 определяет защиту от кита и динамическую цену.
+- Этап 6 определяет автоматические выплаты через Merkle settlement.
+- Этап 7 определяет result root/hash спортивных результатов.
+
+Главное правило:
+
+```text
+смарт-контракт хранит деньги и проверяемые корни, но не выполняет тяжелые расчеты MVP.
+```
+
+---
+
+## 2. Базовые технологические решения
+
+### 2.1. Сеть
+
+Финальная сеть выбирается отдельным решением перед разработкой.
+
+Кандидаты:
+
+- Base;
+- Arbitrum;
+- Polygon;
+- другая EVM-сеть с низкими комиссиями и нормальной поддержкой USDC.
+
+Требования к сети:
+
+- EVM-совместимость;
+- нативный или надежный bridged USDC;
+- низкая стоимость claimFor;
+- стабильный RPC;
+- поддержка multisig;
+- поддержка блокчейн-обозревателя;
+- достаточная ликвидность и доверие пользователей.
+
+### 2.2. Язык и библиотеки
+
+Предварительно:
+
+```text
+Solidity stable 0.8.x
+OpenZeppelin Contracts 5.x
+```
+
+Используемые библиотеки и паттерны:
+
+- `SafeERC20 (безопасная работа с ERC-20 токенами)`;
+- `AccessControl (управление ролями)`;
+- `Pausable (пауза контрактов)`;
+- `ReentrancyGuard (защита от повторного входа)`;
+- `MerkleProof (проверка Merkle proof)`;
+- `TimelockController` или собственная timelock-логика, если потребуется.
+
+Точная версия Solidity и OpenZeppelin фиксируется перед началом кодинга и аудита.
+
+### 2.3. Валюта
+
+Базовая валюта MVP:
+
+```text
+USDC
+decimals = 6
+```
+
+Все расчеты выполняются в минимальных единицах USDC:
+
+```text
+1 USDC = 1_000_000
+```
+
+---
+
+## 3. Архитектурное решение MVP
+
+Для MVP фиксируется модульная схема:
+
+```text
+AccessController
+DrawManager
+TicketVault
+TreasuryVault
+ResultRegistry
+PayoutVault
+EmergencyController
+```
+
+Роли:
+
+| Контракт | Назначение |
+|---|---|
+| AccessController | роли, права, multisig-администрирование |
+| DrawManager | создание тиража, статусы, параметры, неизменность после Open |
+| TicketVault | покупка билетов, прием USDC, события TicketPurchased |
+| TreasuryVault | учет 80/10/10, джекпот, platform fee, gas reserve |
+| ResultRegistry | публикация result root/hash и версий результата |
+| PayoutVault | публикация payout root, claim, claimFor, refund |
+| EmergencyController | pause/unpause и аварийные сценарии |
+
+Допускается объединение некоторых контрактов на MVP, если аудит покажет, что так безопаснее и дешевле. Но логические зоны ответственности должны остаться разделенными.
+
+---
+
+## 4. Что on-chain, а что off-chain
+
+### 4.1. On-chain
+
+В блокчейне фиксируется:
+
+- drawId;
+- статус тиража;
+- ключевые параметры тиража;
+- comboPrice;
+- maxTicketAmount;
+- maxWalletAmountPerDraw;
+- activeJackpot;
+- ticket purchase event;
+- totalHandle;
+- распределение 80/10/10;
+- resultRoot или resultManifestHash;
+- payoutRoot;
+- claimed bitmap;
+- статус pause;
+- события для аудита.
+
+### 4.2. Off-chain
+
+Вне блокчейна выполняется:
+
+- подбор спортивных событий;
+- event mapping между API;
+- сверка спортивных результатов;
+- расчет системных ставок;
+- хранение полного ticket payload;
+- risk engine против кита;
+- расчет победителей;
+- формирование payout manifest;
+- хранение Merkle tree и Merkle proof;
+- мониторинг gas reserve;
+- пользовательская аналитика.
+
+Off-chain расчет не должен быть “черным ящиком”. Его результат должен подтверждаться hash/root и audit log.
+
+---
+
+## 5. DrawManager
+
+DrawManager управляет жизненным циклом тиража.
+
+Статусы:
+
+| Статус | Значение |
+|---|---|
+| Draft | тираж готовится |
+| Prepared | параметры готовы |
+| Open | продажи открыты |
+| Locked | продажи закрыты |
+| AwaitingResults | ожидание результатов |
+| ResultsUnderReview | результаты на проверке |
+| Finalized | результаты финализированы |
+| PayoutsActive | выплаты активированы |
+| Completed | тираж завершен |
+| Paused | пауза |
+| Cancelled | тираж отменен |
+
+Минимальные данные:
+
+```text
+drawId
+productType
+eventsCount
+comboPrice
+activeJackpot
+salesOpenAt
+salesCloseAt
+appealWindowSeconds
+payoutTimelockSeconds
+maxTicketAmount
+maxWalletAmountPerDraw
+status
+createdAt
+openedAt
+lockedAt
+```
+
+Функции:
+
+```text
+createDraw(drawParams)
+prepareDraw(drawId, riskParams)
+openDraw(drawId)
+lockDraw(drawId)
+pauseDraw(drawId, reasonCode)
+resumeDraw(drawId)
+cancelDraw(drawId, reasonCode)
+setResultUnderReview(drawId)
+finalizeDraw(drawId)
+markCompleted(drawId)
+```
+
+Правила:
+
+- после `Open` нельзя менять comboPrice;
+- после `Open` нельзя менять activeJackpot;
+- после `Open` нельзя менять список событий;
+- после `Open` нельзя менять правила распределения;
+- `openDraw` запрещен, если risk engine не разрешил открытие;
+- `openDraw` запрещен, если параметры джекпота не зафиксированы;
+- `openDraw` запрещен, если контракт не готов принимать USDC;
+- `cancelDraw` после покупки билетов запускает refund-процедуру.
+
+---
+
+## 6. TicketVault
+
+TicketVault принимает оплату билетов и фиксирует покупку.
+
+### 6.1. Ticket model
+
+Минимальная структура:
+
+```text
+ticketId
+drawId
+buyer
+ticketHash
+combinationsCount
+stakePerCombination
+ticketPrice
+purchasedAt
+```
+
+`ticketHash` - hash полного off-chain описания билета:
+
+```text
+hash(drawId, buyer, selections, combinationsCount, stakePerCombination, ticketNonce)
+```
+
+Полный список selections (выборов пользователя) может храниться off-chain, но hash должен позволять проверить, что билет не изменился после покупки.
+
+### 6.2. Покупка билета
+
+Функция:
+
+```text
+buyTicket(drawId, ticketHash, combinationsCount, stakePerCombination, ticketPrice)
+```
+
+Проверки:
+
+- draw status = Open;
+- текущий timestamp внутри окна продаж;
+- ticketPrice = combinationsCount * stakePerCombination;
+- stakePerCombination >= comboPrice;
+- combinationsCount <= maxCombinationsPerTicket;
+- ticketPrice <= maxTicketAmount;
+- walletSpentInDraw + ticketPrice <= maxWalletAmountPerDraw;
+- USDC allowance достаточный;
+- USDC transferFrom успешен;
+- ticketHash не использовался ранее.
+
+События:
+
+```text
+TicketPurchased(drawId, ticketId, buyer, ticketHash, combinationsCount, ticketPrice)
+WalletDrawSpendUpdated(drawId, buyer, totalSpent)
+```
+
+### 6.3. Важное ограничение
+
+Смарт-контракт MVP не обязан раскладывать системную ставку в каждую комбинацию. Это делает off-chain ticket engine.
+
+Контракт должен проверить:
+
+- количество комбинаций;
+- цену;
+- лимиты;
+- hash билета;
+- оплату.
+
+---
+
+## 7. TreasuryVault
+
+TreasuryVault отвечает за учет средств.
+
+Базовое распределение:
+
+```text
+prizePool = handle * 80%
+platformFeeGross = handle * 10%
+jackpotContribution = handle * 10%
+gasReserve = handle * 2%
+platformOperatingFee = handle * 8%
+```
+
+Важно:
+
+```text
+gasReserve является внутренней частью platformFeeGross,
+а не дополнительным удержанием сверх 80/10/10.
+```
+
+Функции:
+
+```text
+accountTicketPurchase(drawId, amount)
+finalizeEconomy(drawId)
+fundPayoutVault(drawId, amount)
+fundRefundVault(drawId, amount)
+moveJackpotContributionToNextDraw(drawId)
+applyJackpotSupportTopUp(drawId, amount)
+```
+
+Правила:
+
+- prizePool нельзя использовать для gas reserve;
+- jackpot нельзя использовать для gas reserve;
+- jackpotContribution текущего тиража идет в следующий тираж;
+- activeJackpot фиксируется до Open;
+- минимальный публичный джекпот MVP = 5 000 USDC;
+- top-up до минимального джекпота идет из jackpot support reserve или операционных средств;
+- неиспользованные доли и rounding dust идут в jackpot reserve следующего тиража;
+- каждый перевод средств должен иметь событие.
+
+События:
+
+```text
+TreasuryAccounted(drawId, handle, prizePool, platformFeeGross, jackpotContribution)
+GasReserveAccounted(drawId, gasReserve, platformOperatingFee)
+JackpotLocked(drawId, activeJackpot)
+JackpotSupportTopUp(drawId, amount, source)
+JackpotContributionMoved(drawId, nextDrawId, amount)
+PayoutVaultFunded(drawId, amount)
+RefundVaultFunded(drawId, amount)
+```
+
+---
+
+## 8. ResultRegistry
+
+ResultRegistry фиксирует финальный результат тиража.
+
+Минимальные данные:
+
+```text
+drawId
+resultVersion
+validEventsCount
+resultRoot
+manifestHash
+publishedAt
+finalizedAt
+status
+```
+
+Функции:
+
+```text
+publishResultRoot(drawId, resultVersion, resultRoot, manifestHash, validEventsCount)
+challengeResultRoot(drawId, resultVersion, reasonCode)
+finalizeResultRoot(drawId, resultVersion)
+cancelResultRoot(drawId, resultVersion, reasonCode)
+getResultRoot(drawId)
+```
+
+Правила:
+
+- result root нельзя публиковать до закрытия продаж;
+- settlement нельзя запускать до финализации result root;
+- новая версия результата должна увеличивать resultVersion;
+- отмена root после финализации допускается только через аварийную процедуру;
+- решения, влияющие на выплаты, требуют multisig 2 из 3;
+- validEventsCount может быть только 15, 14, 13 или 0 для void/refund.
+
+События:
+
+```text
+ResultRootPublished(drawId, resultVersion, resultRoot, manifestHash, validEventsCount)
+ResultRootChallenged(drawId, resultVersion, reasonCode)
+ResultRootFinalized(drawId, resultVersion)
+ResultRootCancelled(drawId, resultVersion, reasonCode)
+```
+
+---
+
+## 9. PayoutVault
+
+PayoutVault реализует выплаты через Merkle proof.
+
+Архитектура из этапа 6:
+
+```text
+Merkle settlement + sponsored claim + automatic executor + fallback claim
+```
+
+Функции:
+
+```text
+publishPayoutRoot(drawId, root, totalAmount, manifestHash)
+activatePayouts(drawId)
+claim(drawId, leafData, merkleProof)
+claimFor(drawId, recipient, leafData, merkleProof)
+pausePayouts(drawId, reasonCode)
+resumePayouts(drawId)
+cancelPayoutRoot(drawId, rootVersion, reasonCode)
+```
+
+Leaf data:
+
+```text
+drawId
+rootVersion
+leafIndex
+userAddress
+tokenAddress
+amount
+ticketId
+claimDeadline
+```
+
+Проверки:
+
+- drawId совпадает;
+- rootVersion актуальна;
+- Merkle proof валиден;
+- leafIndex еще не claimed;
+- tokenAddress = USDC;
+- amount > 0;
+- claimDeadline не истек;
+- выплаты активированы;
+- контракт не на паузе;
+- KYC/compliance блокировка учтена off-chain до claimFor.
+
+Защита от повторной выплаты:
+
+```text
+claimedBitmap[drawId][rootVersion][leafIndex] = true
+```
+
+События:
+
+```text
+PayoutRootPublished(drawId, rootVersion, root, totalAmount, manifestHash)
+PayoutsActivated(drawId, rootVersion)
+PayoutClaimed(drawId, rootVersion, leafIndex, user, amount, executor)
+PayoutClaimFailed(drawId, rootVersion, leafIndex, user, reasonCode)
+PayoutPaused(drawId, reasonCode)
+PayoutResumed(drawId)
+PayoutRootCancelled(drawId, rootVersion, reasonCode)
+RefundClaimed(drawId, rootVersion, leafIndex, user, amount, executor)
+```
+
+---
+
+## 10. Refund
+
+Если 3+ события исключены, тираж становится void.
+
+Правило:
+
+```text
+refund = 100% paid ticket price
+platformFee = 0
+jackpotContribution = 0
+```
+
+Refund выполняется через ту же архитектуру:
+
+```text
+Refund manifest -> Merkle root -> sponsored claim -> fallback claim
+```
+
+Смарт-контракт не должен смешивать refund и выигрыш:
+
+- refund имеет payoutLevel = Refund;
+- refund не создает jackpotContribution;
+- refund не участвует в prizePool;
+- refund должен быть проверяемым через Merkle proof.
+
+---
+
+## 11. Сокращенные тиражи 14/13
+
+Если исключено 1-2 события, тираж может быть валидным сокращенным тиражом.
+
+Правила:
+
+- при 14/13 activeJackpot 15/15 не разыгрывается;
+- activeJackpot переносится дальше;
+- 10% текущего оборота идет в джекпот следующего тиража;
+- 80% prizePool распределяется по сокращенной сетке;
+- payout manifest должен содержать validEventsCount;
+- payout root публикуется уже по сокращенной сетке.
+
+Контракт PayoutVault не обязан знать все формулы сокращенной сетки. Он проверяет Merkle proof и сумму из утвержденного payout root.
+
+---
+
+## 12. AccessControl и роли
+
+Роли:
+
+| Роль | Назначение |
+|---|---|
+| DEFAULT_ADMIN_ROLE | настройка ролей, должен быть multisig |
+| DRAW_ADMIN_ROLE | создание и подготовка тиражей |
+| DRAW_OPERATOR_ROLE | открытие/закрытие продаж по готовым параметрам |
+| RISK_MANAGER_ROLE | публикация risk params до Open |
+| RESULT_PUBLISHER_ROLE | публикация result root |
+| RESULT_FINALIZER_ROLE | финализация result root |
+| PAYOUT_ROOT_PUBLISHER_ROLE | публикация payout root |
+| EXECUTOR_ROLE | вызов claimFor |
+| PAUSER_ROLE | pause/unpause |
+| TREASURY_ROLE | учет и перемещение средств по утвержденным правилам |
+| AUDITOR_ROLE | read-only доступ через backend/индексатор |
+
+Критические действия через multisig 2 из 3:
+
+- смена ролей;
+- cancelDraw после покупки билетов;
+- cancelResultRoot;
+- cancelPayoutRoot;
+- изменение адресов контрактов;
+- emergency withdraw, если такой механизм вообще будет разрешен;
+- изменение лимитов MVP;
+- изменение адреса USDC;
+- миграция средств.
+
+Executor не должен иметь права:
+
+- публиковать payout root;
+- активировать выплаты;
+- менять суммы;
+- выводить средства;
+- менять роли.
+
+---
+
+## 13. Pause и аварийные сценарии
+
+Нужны разные типы pause:
+
+| Пауза | Что блокирует |
+|---|---|
+| Draw pause | открытие/покупку билетов |
+| Ticket pause | покупку билетов |
+| Result pause | публикацию/финализацию результатов |
+| Payout pause | claim и claimFor |
+| Global pause | критическая остановка системы |
+
+Pause не дает право менять правила открытого тиража.
+
+Причины pause:
+
+- ошибка контракта;
+- неверный result root;
+- неверный payout root;
+- атака на claim;
+- сбой USDC transfer;
+- критическая ошибка API/оракула;
+- подозрение на компрометацию роли;
+- аномальная активность кита.
+
+Каждый pause должен иметь `reasonCode` и событие.
+
+---
+
+## 14. Upgradeability
+
+Вопрос upgradeability (обновляемости контрактов) требует отдельного решения перед разработкой.
+
+Вариант A: non-upgradeable contracts (необновляемые контракты).
+
+Плюсы:
+
+- проще доверие;
+- проще аудит;
+- меньше admin risk.
+
+Минусы:
+
+- ошибка требует миграции;
+- сложнее развивать продукт.
+
+Вариант B: upgradeable proxy (обновляемые прокси).
+
+Плюсы:
+
+- можно исправлять ошибки;
+- проще добавлять новые продукты.
+
+Минусы:
+
+- выше риск админского контроля;
+- сложнее аудит;
+- пользователю нужно доверять механизму upgrade.
+
+Рекомендация MVP:
+
+```text
+критические vault-контракты делать максимально простыми;
+upgradeability разрешать только через multisig + timelock + публичные события,
+или запускать non-upgradeable MVP с возможностью миграции на v2.
+```
+
+Финальное решение принять в этапе аудита и безопасности.
+
+---
+
+## 15. Инварианты
+
+Контракты должны выполнять:
+
+```text
+ticketPrice == combinationsCount * stakePerCombination
+```
+
+```text
+stakePerCombination >= comboPrice
+```
+
+```text
+draw parameters cannot change after Open
+```
+
+```text
+activeJackpot cannot decrease after Open
+```
+
+```text
+sum(prizePool + platformFeeGross + jackpotContribution) == handle
+```
+
+```text
+gasReserve is inside platformFeeGross
+```
+
+```text
+jackpotContribution current draw -> next draw
+```
+
+```text
+same payout leaf cannot be claimed twice
+```
+
+```text
+payout cannot start before result finalization and payout timelock
+```
+
+```text
+refund cannot charge platform fee
+```
+
+```text
+15/15 jackpot cannot be paid in reduced 14/13 draw
+```
+
+---
+
+## 16. События
+
+Минимальные события:
+
+```text
+DrawCreated(drawId, productType)
+DrawPrepared(drawId, comboPrice, activeJackpot)
+DrawOpened(drawId)
+DrawLocked(drawId)
+DrawPaused(drawId, reasonCode)
+DrawResumed(drawId)
+DrawCancelled(drawId, reasonCode)
+
+TicketPurchased(drawId, ticketId, buyer, ticketHash, combinationsCount, ticketPrice)
+
+TreasuryAccounted(drawId, handle, prizePool, platformFeeGross, jackpotContribution)
+GasReserveAccounted(drawId, gasReserve, platformOperatingFee)
+JackpotLocked(drawId, activeJackpot)
+JackpotSupportTopUp(drawId, amount, source)
+JackpotContributionMoved(drawId, nextDrawId, amount)
+
+ResultRootPublished(drawId, resultVersion, resultRoot, manifestHash, validEventsCount)
+ResultRootFinalized(drawId, resultVersion)
+ResultRootCancelled(drawId, resultVersion, reasonCode)
+
+PayoutRootPublished(drawId, rootVersion, root, totalAmount, manifestHash)
+PayoutsActivated(drawId, rootVersion)
+PayoutClaimed(drawId, rootVersion, leafIndex, user, amount, executor)
+RefundClaimed(drawId, rootVersion, leafIndex, user, amount, executor)
+
+RoleGranted(role, account, sender)
+RoleRevoked(role, account, sender)
+EmergencyAction(actionType, reasonCode)
+```
+
+События должны позволять восстановить историю тиража через индексатор.
+
+---
+
+## 17. Безопасность
+
+Обязательные меры:
+
+- SafeERC20 для USDC;
+- ReentrancyGuard на функциях перевода средств;
+- Checks-Effects-Interactions pattern (сначала проверки, потом изменение состояния, потом внешний вызов);
+- AccessControl для ролей;
+- multisig для admin role;
+- pause для критических сценариев;
+- запрет изменения параметров после Open;
+- claimed bitmap;
+- проверка Merkle proof;
+- явные reasonCode для отмены и пауз;
+- тесты на rounding;
+- тесты на повторный claim;
+- тесты на неверный root;
+- тесты на USDC decimals = 6.
+
+Запрещено:
+
+- admin withdrawal из prizePool без аварийной процедуры;
+- изменение ticketHash после покупки;
+- изменение comboPrice после Open;
+- изменение activeJackpot после Open;
+- claim без проверки Merkle proof;
+- claimFor без роли executor;
+- изменение result root без версии и события.
+
+---
+
+## 18. Тестовые сценарии
+
+Минимальные сценарии:
+
+1. Создание тиража.
+2. Подготовка параметров.
+3. Запрет Open без risk params.
+4. Покупка одиночного билета.
+5. Покупка системного билета.
+6. Превышение maxTicketAmount.
+7. Превышение maxWalletAmountPerDraw.
+8. Неверный ticketPrice.
+9. Попытка изменить comboPrice после Open.
+10. Закрытие продаж.
+11. Публикация result root.
+12. Финализация result root.
+13. Публикация payout root.
+14. claim с корректным proof.
+15. claimFor executor-ом.
+16. повторный claim того же leaf.
+17. claim с неверным proof.
+18. refund при void.
+19. 14/13 без выплаты джекпота.
+20. pause и resume.
+21. отмена root до активации.
+22. попытка executor опубликовать root.
+23. проверка распределения 80/10/10.
+24. проверка rounding dust.
+25. emergency scenario через multisig.
+
+---
+
+## 19. Аудит
+
+Перед mainnet запуском обязательно:
+
+- internal review (внутренний код-ревью);
+- unit tests (модульные тесты);
+- integration tests (интеграционные тесты);
+- fuzz tests (фаззинг);
+- invariant tests (проверка инвариантов);
+- static analysis (статический анализ);
+- external audit (внешний аудит);
+- testnet dry run (прогон на тестовой сети);
+- bug bounty или закрытая проверка после аудита.
+
+Аудит должен отдельно проверить:
+
+- хранение и движение USDC;
+- невозможность двойной выплаты;
+- роли и multisig;
+- pause;
+- Merkle proof;
+- refund;
+- сокращенные тиражи;
+- upgradeability, если она будет выбрана;
+- соответствие этапам 2-7.
+
+---
+
+## 20. Открытые вопросы
+
+| Вопрос | Куда переносится |
+|---|---|
+| Финальная EVM-сеть | Этап инфраструктуры / финальное архитектурное решение |
+| Upgradeable или non-upgradeable | Этап аудита и безопасности |
+| Финальная версия Solidity | Старт разработки |
+| Финальная версия OpenZeppelin | Старт разработки |
+| KYC threshold | Комплаенс |
+| Emergency withdrawal policy | Юридический и финансовый этап |
+| Формат resultRoot | Связка этапов оракула и контрактов |
+| Формат payout leaf | Финализация этапа выплат и контрактов |
+
+---
+
+## 21. Критерии приемки
+
+Этап 8 считается согласованным, если:
+
+- определен список контрактов MVP;
+- определено, что on-chain, а что off-chain;
+- описан DrawManager;
+- описан TicketVault;
+- описан TreasuryVault;
+- описан ResultRegistry;
+- описан PayoutVault;
+- описан refund;
+- описаны 14/13;
+- описаны роли;
+- описаны pause-сценарии;
+- описаны события;
+- описаны инварианты;
+- определены требования к аудиту;
+- зафиксированы открытые вопросы.
+
+---
+
+## 22. Итоговое решение
+
+Для MVP принимается модульная smart contract architecture:
+
+```text
+DrawManager + TicketVault + TreasuryVault + ResultRegistry + PayoutVault + AccessControl
+```
+
+Ключевые решения:
+
+- USDC является валютой MVP;
+- контракты работают с USDC в 6 decimals;
+- тяжелые расчеты остаются off-chain;
+- on-chain фиксируются деньги, параметры, hash/root и выплаты;
+- параметры тиража нельзя менять после Open;
+- jackpot фиксируется до Open;
+- 80/10/10 сохраняется;
+- gas reserve находится внутри комиссии платформы;
+- выплаты идут через Merkle proof;
+- повторный claim невозможен;
+- критические действия требуют multisig;
+- аудит обязателен до mainnet.
+
+Главный принцип:
+
+```text
+смарт-контракты должны быть простыми для аудита, строгими в деньгах и прозрачными для пользователя.
+```

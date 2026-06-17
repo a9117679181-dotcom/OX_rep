@@ -1,0 +1,2 @@
+jurisdiction,cross_border_pool_allowed,local_players_in_global_pool,global_jackpot_advertising,segregated_pool_needed,shared_liquidity_restrictions,position,key_sources
+Nigeria,UNKNOWN,UNCLEAR,LIKELY_SUBJECT_TO_APPROVAL,LIKELY_AS_FALLBACK,UNKNOWN,"Treat global pool as critical unresolved risk. Use Nigeria/operator/licence-segregated pool unless local counsel/regulator confirms shared liquidity and global jackpot display.","NGA-GAM-001; NGA-ARCON-001"

@@ -1,0 +1,187 @@
+# OX - Этап 14. Документ для согласования
+
+## Безопасность, тесты и аудит
+
+Дата: 10.06.2026  
+Версия: v2  
+Статус: финальные решения для согласования после анализа внешних замечаний  
+Проект: OX, спортивный экспресс  
+Стартовый продукт: Суперэкспресс 15
+
+---
+
+## 1. Что нужно согласовать
+
+Этот документ выделяет решения, которые нужно подтвердить перед разработкой и запуском security/testing/audit процесса.
+
+Речь идет о допуске OX к testnet и mainnet:
+
+- какие тесты обязательны;
+- нужен ли внешний аудит;
+- что блокирует запуск;
+- как исправляются audit findings;
+- когда запускать bug bounty;
+- какие аварийные процедуры должны быть готовы.
+
+---
+
+## 2. Главные решения
+
+| # | Решение | Рекомендованный статус | Комментарий |
+|---:|---|---|---|
+| 1 | Mainnet запуск запрещен без security gate. | Согласовать | Деньги пользователей нельзя принимать без полного контроля. |
+| 2 | External audit обязателен. | Согласовать | Минимум smart contracts + критический backend. |
+| 3 | Critical findings блокируют запуск. | Согласовать | Без исключений. |
+| 4 | High findings блокируют запуск без formal risk acceptance. | Согласовать | Нужно письменное принятие риска. |
+| 5 | Testnet dry run обязателен. | Согласовать | Проверяет полный цикл тиража. |
+| 6 | Invariant/fuzz tests обязательны. | Согласовать | Особенно для денег, root и выплат. |
+| 7 | Manual fallback требует reasonCode/evidence/audit log. | Согласовать | Иначе ручная процедура опасна. |
+| 8 | Multisig 2 из 3 обязателен для действий, влияющих на деньги. | Согласовать | Защита от одного скомпрометированного админа. |
+| 9 | Audit log нельзя удалить или изменить через admin API. | Согласовать | Критично для расследований. |
+| 10 | Backup/restore drill обязателен до mainnet. | Согласовать | Proof, manifest и audit log нельзя потерять. |
+| 11 | Public bug bounty запускается только после audit remediation. | Согласовать | Сначала закрываем известные проблемы. |
+| 12 | Партнерские security tests обязательны только если партнерский модуль входит в релиз. | Согласовать | Не блокирует core launch. |
+| 13 | Для MVP обязателен один внешний аудит + remediation review. | Согласовать | Два аудита рекомендуются, но не обязательны для MVP. |
+| 14 | Multisig keys должны храниться у разных лиц. | Согласовать | Иначе multisig не снижает реальный риск. |
+| 15 | Merkle proofs и payout manifests должны иметь cold backup. | Согласовать | Без proof нельзя доказать право на выплату. |
+| 16 | Public bug bounty запускается только после утверждения scope и reward rules. | Согласовать | Иначе triage и выплаты будут спорными. |
+
+---
+
+## 3. Что блокирует запуск
+
+Запуск mainnet должен быть заблокирован, если:
+
+- есть unresolved critical audit finding;
+- есть unresolved high finding без formal risk acceptance;
+- не пройден testnet dry run;
+- не прошли invariant tests;
+- не прошли payout/refund tests;
+- обнаружена возможность двойной выплаты;
+- обнаружена возможность admin withdrawal из пользовательских средств;
+- audit log можно удалить или изменить через admin API;
+- backup/restore drill не проведен;
+- multisig signers не проверены;
+- нет incident response runbook.
+
+---
+
+## 4. Минимальный audit scope
+
+Аудит должен покрывать:
+
+- smart contracts;
+- Merkle settlement;
+- payout/refund logic;
+- roles and multisig;
+- pause/emergency controls;
+- backend root builder;
+- proof API;
+- executor/relayer;
+- oracle result pipeline;
+- admin critical actions;
+- audit log integrity.
+
+---
+
+## 5. Testnet dry run
+
+Нужно согласовать обязательный testnet dry run.
+
+Минимальный сценарий:
+
+1. Deploy contracts.
+2. Configure roles.
+3. Configure multisig.
+4. Create draw.
+5. Add 15 events.
+6. Open draw.
+7. Buy tickets.
+8. Trigger risk limits.
+9. Lock draw.
+10. Pull oracle results.
+11. Create mismatch/manual review.
+12. Run appeal window.
+13. Build settlement.
+14. Publish resultRoot.
+15. Publish payoutRoot.
+16. Execute claimFor.
+17. Execute user fallback claim.
+18. Run refund scenario.
+19. Pause/resume payouts.
+20. Export audit log.
+21. Restore backup in staging.
+22. Produce dry run report.
+
+---
+
+## 6. Bug bounty
+
+Рекомендация:
+
+```text
+Не запускать публичный bug bounty до внешнего аудита и remediation.
+```
+
+Порядок:
+
+1. Internal review.
+2. External audit.
+3. Remediation.
+4. Private security review.
+5. Limited bug bounty.
+6. Public bug bounty later.
+
+Перед публичным bug bounty нужно утвердить scope, out-of-scope список, severity matrix, минимальные и максимальные выплаты, процедуру приема отчетов и правила coordinated disclosure.
+
+---
+
+## 7. Что принимаем и что отклоняем после внешнего анализа
+
+Принимаем:
+
+- усиление external audit scope через remediation review;
+- разделение multisig keys между разными лицами;
+- cold backup для proofs/manifests;
+- дополнительные reorg/indexer tests;
+- пиковые performance tests;
+- правила bug bounty до публичного запуска;
+- публичные и юридические шаблоны incident response.
+
+Отклоняем как обязательное для MVP:
+
+- два независимых внешних аудита до первого запуска.
+
+Обоснование:
+
+```text
+Два аудита - сильный стандарт, но для MVP обязательный минимум:
+один внешний аудит + исправление critical/high + remediation review.
+```
+
+---
+
+## 8. Открытые вопросы
+
+| Вопрос | Кто должен подтвердить |
+|---|---|
+| Auditor company | Founder / Engineering |
+| Audit budget | Founder / Finance |
+| Bug bounty platform | Founder / Security |
+| Final CI/CD stack | Engineering |
+| Secrets manager | Engineering / Security |
+| RPO/RTO | Engineering / Operations |
+| Formal risk acceptance process | Founder / Legal / Security |
+| Public audit summary format | Founder / Legal |
+
+---
+
+## 9. Рекомендованный итог
+
+Рекомендованная позиция:
+
+```text
+OX не выходит в mainnet, пока не пройдены тесты, testnet dry run, внешний аудит и исправление critical/high рисков.
+```
+
+Это решение может замедлить запуск, но защищает главный актив проекта: доверие к честным выплатам.

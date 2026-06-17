@@ -1,0 +1,1063 @@
+# OX - Этап 14. Безопасность, тесты и аудит
+
+Дата: 10.06.2026  
+Версия: v2  
+Статус: финальная рабочая версия после анализа внешних замечаний  
+Проект: OX, спортивный экспресс  
+Стартовый продукт: Суперэкспресс 15  
+Будущий продукт: Мегаэкспресс 16  
+Девиз: Честно. Прозрачно. Мгновенно.
+
+---
+
+## 1. Назначение документа
+
+Этот документ фиксирует требования к безопасности, тестированию, аудиту, проверкам перед запуском и программе поиска уязвимостей OX.
+
+Этап 14 не добавляет новую продуктовую механику. Он превращает решения этапов 1-13 в проверяемую систему контроля качества.
+
+Главная формула этапа:
+
+```text
+Нельзя запускать OX с пользовательскими средствами,
+пока деньги, результаты, выплаты, роли, логи и аварийные сценарии не проверены тестами и аудитом.
+```
+
+Документ нужен для пяти задач:
+
+- определить threat model (модель угроз);
+- описать обязательные тесты smart contracts, backend, oracle, payouts, admin и analytics;
+- зафиксировать audit checklist (чеклист аудита);
+- определить критерии допуска к testnet и mainnet;
+- описать bug bounty или закрытую security review программу после аудита.
+
+После внешнего анализа v1 принимаем точечные усиления по audit scope, multisig key separation, cold backup, bug bounty rules, incident communications, indexer reorg tests, peak load tests и key management policy.
+
+Не принимаем как обязательное для MVP требование двух независимых аудитов. Для MVP обязательный минимум: один внешний аудит, исправление critical/high findings и remediation review (повторная проверка исправлений).
+
+---
+
+## 2. Базовое решение
+
+Принимаем:
+
+```text
+Security gate (контрольный порог безопасности) обязателен перед mainnet.
+Если критический тест, инвариант или аудит не пройден, запуск блокируется.
+```
+
+Security gate должен покрывать:
+
+- smart contracts;
+- backend;
+- indexer;
+- oracle/result pipeline;
+- settlement;
+- payout executor;
+- admin panel;
+- manual fallback;
+- multisig 2 из 3;
+- monitoring and alerts;
+- audit log;
+- backup and restore;
+- affiliate tracking endpoints, если партнерский модуль включен в релиз.
+
+---
+
+## 3. Что входит в этап 14
+
+В этап входит:
+
+- threat model;
+- security requirements matrix;
+- unit tests;
+- integration tests;
+- end-to-end tests;
+- smart contract tests;
+- invariant tests;
+- fuzz tests;
+- oracle tests;
+- settlement tests;
+- payout tests;
+- admin RBAC tests;
+- manual fallback tests;
+- multisig 2 из 3 tests;
+- monitoring and alert tests;
+- backup and restore tests;
+- data retention and audit log tests;
+- testnet dry run;
+- external audit;
+- audit remediation process;
+- release security checklist;
+- incident response checklist;
+- bug bounty / private security review.
+
+В этап не входит:
+
+- разработка нового продукта;
+- изменение распределения призового фонда;
+- изменение юридических правил KYC/AML;
+- выбор финального провайдера bug bounty без отдельного решения;
+- публичный bug bounty до внешнего аудита и исправления критических проблем;
+- обещание абсолютной безопасности.
+
+---
+
+## 4. Связь с предыдущими этапами
+
+| Этап | Что проверяет этап 14 |
+|---|---|
+| Этап 2. Жизненный цикл тиража | статусы тиража, запрет действий не в той фазе, audit log |
+| Этап 3. Билеты и системные ставки | ticketHash, цена билета, лимиты, системные ставки, failed transactions |
+| Этап 4. Призовой фонд и джекпот | распределение средств, jackpot, rounding, запрет admin withdrawal |
+| Этап 5. Защита от кита | лимиты, comboPrice, full coverage, связанные кошельки |
+| Этап 6. Автоматические выплаты | Merkle proof, claimFor, sponsored claims, refund, gas pause |
+| Этап 7. Оракул и результаты | 3 источника, mismatch, manual review, appeal window, result manifest |
+| Этап 8. Смарт-контракты | роли, pause, инварианты, события, non-upgradeable MVP |
+| Этап 9. Сервер/индексатор/выплаты | replay, checkpoint, backup, idempotency, executor |
+| Этап 10. UI | честность интерфейса, статусы, security UX |
+| Этап 11. Админ-панель | RBAC, MFA, audit log, emergency controls |
+| Этап 12. Комплаенс | geo-blocking, KYC/AML, хранение логов, запрещенные страны |
+| Этап 13. Партнерка и аналитика | tracking endpoints, fraud, privacy, affiliate audit log |
+
+---
+
+## 5. Threat model
+
+Threat model (модель угроз) описывает, кто и как может атаковать систему.
+
+### 5.1. Активы
+
+Критические активы:
+
+- USDC пользователей;
+- prize pool;
+- jackpot reserve;
+- payout vault;
+- refund funds;
+- ticketHash и билеты;
+- resultRoot;
+- payoutRoot;
+- Merkle proofs;
+- oracle raw payloads и hashes;
+- admin credentials;
+- executor signer;
+- API keys;
+- audit logs;
+- KYC/AML статусы;
+- partner attribution data;
+- production configuration.
+
+### 5.2. Потенциальные атакующие
+
+| Атакующий | Риск |
+|---|---|
+| Внешний пользователь | двойной claim, exploit контракта, обход лимитов |
+| Whale | попытка купить слишком много комбинаций или обойти лимиты |
+| Компрометированный администратор | ручная подмена результата, root или настроек |
+| Компрометированный executor | повторные claimFor, gas drain, неверные транзакции |
+| Ошибочный oracle provider | неправильный результат |
+| Злоумышленный партнер | CPA-fraud, запрещенный трафик |
+| Инсайдер | удаление логов, изменение отчетов |
+| Бот/скрипт | click spam, API abuse, replay |
+| Ошибка разработчика | неверный rounding, неверный proof, некорректный status transition |
+
+### 5.3. Главные угрозы
+
+Угрозы:
+
+- потеря пользовательских средств;
+- двойная выплата;
+- невыплата честному победителю;
+- подмена результата;
+- публикация неверного payoutRoot;
+- изменение правил после открытия тиража;
+- обход KYC/geo/compliance;
+- удаление или подмена audit log;
+- компрометация private keys/API keys;
+- replay/idempotency ошибка;
+- reorg/indexer mismatch;
+- failure при массовых claimFor;
+- зависание выплат из-за gas;
+- fraud в партнерской программе;
+- утечка чувствительных данных.
+
+---
+
+## 6. Security principles
+
+Обязательные принципы:
+
+```text
+User funds first.
+```
+
+Пользовательские средства не должны использоваться для операционных расходов, партнерских выплат или ручных административных действий.
+
+```text
+No hidden admin withdrawal.
+```
+
+Администратор не должен иметь возможность вывести prizePool, jackpot, refund funds или funded payout vault.
+
+```text
+No settlement without final result.
+```
+
+Settlement нельзя запускать до финализации результатов и завершения окна апелляции.
+
+```text
+No payout without proof.
+```
+
+Claim и claimFor невозможны без корректного Merkle proof.
+
+```text
+No manual action without audit trail.
+```
+
+Ручные действия должны иметь actor, role, reasonCode, timestamp и evidence.
+
+```text
+No production launch without independent review.
+```
+
+Перед mainnet нужен внешний аудит или закрытая независимая security review.
+
+---
+
+## 7. Smart contract tests
+
+### 7.1. Unit tests
+
+Минимальные unit tests:
+
+1. Создание тиража.
+2. Подготовка параметров.
+3. Запрет Open без обязательных risk params.
+4. Покупка одиночного билета.
+5. Покупка системного билета.
+6. Проверка ticketPrice.
+7. Проверка USDC decimals = 6.
+8. Превышение maxTicketAmount.
+9. Превышение maxWalletAmountPerDraw.
+10. Попытка изменить comboPrice после Open.
+11. Закрытие продаж.
+12. Публикация result root.
+13. Финализация result root.
+14. Публикация payout root.
+15. Активация payout root.
+16. Claim с корректным proof.
+17. ClaimFor через executor.
+18. Повторный claim того же leaf.
+19. Claim с неверным proof.
+20. Refund при void.
+21. 14/13 без выплаты jackpot текущего тиража.
+22. Pause и resume.
+23. Отмена root до активации.
+24. Попытка executor опубликовать root.
+25. Проверка распределения 80/10/10 или актуальной согласованной модели.
+26. Проверка rounding dust.
+27. Emergency scenario через multisig.
+28. Попытка emergency withdrawal из пользовательских средств.
+
+### 7.2. Negative tests
+
+Нужно проверять, что запрещенные действия невозможны:
+
+- покупка после DrawLocked;
+- покупка без signed permit, если permit включен;
+- покупка из blocked country после backend check;
+- claim без proof;
+- claim с proof другого пользователя;
+- claim с proof другого drawId;
+- claim после refund для того же leaf;
+- публикация payoutRoot без роли;
+- изменение resultRoot без версии;
+- изменение jackpot после Open;
+- вывод prizePool администратором;
+- удаление claimed bitmap;
+- повторная активация root без версии.
+
+### 7.3. Invariant tests
+
+Инварианты:
+
+```text
+contract USDC balance >= unpaid user obligations
+```
+
+```text
+same payout leaf cannot be claimed twice
+```
+
+```text
+same refund leaf cannot be claimed twice
+```
+
+```text
+admin cannot withdraw user funds
+```
+
+```text
+draw parameters cannot change after Open
+```
+
+```text
+jackpot contribution of current draw goes to next jackpot
+```
+
+```text
+result root and payout root are versioned
+```
+
+```text
+total claimed amount <= payoutRoot totalAmount
+```
+
+```text
+refund total claimed <= refundRoot totalAmount
+```
+
+```text
+pause blocks risky actions but does not erase accounting
+```
+
+### 7.4. Fuzz tests
+
+Fuzz tests должны покрывать:
+
+- случайные ticket combinations;
+- случайные ticket amounts;
+- границы maxTicketAmount;
+- границы maxWalletAmountPerDraw;
+- разные комбинации исходов 1/X/2;
+- rounding при малых и больших суммах;
+- случайный порядок claim;
+- повторные попытки claim;
+- случайные root versions;
+- случайные void/14/13 сценарии;
+- случайные pause/resume последовательности.
+
+### 7.5. Static analysis
+
+Перед аудитом нужны:
+
+- Slither или аналогичный static analyzer;
+- проверка reentrancy;
+- проверка unchecked call;
+- проверка access control;
+- проверка integer/rounding risks;
+- проверка upgradeability risks, если proxy когда-либо появится;
+- проверка event completeness;
+- проверка unused privileged functions.
+
+---
+
+## 8. Backend, indexer and relayer tests
+
+### 8.1. Backend tests
+
+Проверить:
+
+- idempotency purchase endpoints;
+- signed purchase permit;
+- geo/compliance decision до покупки;
+- KYC threshold logic;
+- risk engine до Open;
+- запрет settlement при спорных результатах;
+- payoutRoot build только после settlement report;
+- proof API возвращает корректный proof;
+- proof API не раскрывает чужие данные;
+- status API возвращает понятные пользовательские статусы;
+- admin API требует RBAC и MFA для критических действий.
+
+### 8.2. Indexer tests
+
+Проверить:
+
+- чтение TicketPurchased;
+- чтение ResultRootPublished;
+- чтение PayoutRootPublished;
+- чтение PayoutClaimed;
+- checkpoint после каждого безопасного блока;
+- replay с заданного блока;
+- отсутствие дублей после replay;
+- reorg simulation;
+- reorg на несколько блоков;
+- падение indexer в момент записи события;
+- повторная обработка partial write без дублей;
+- восстановление после падения;
+- mismatch между DB и blockchain event;
+- alert при отставании индексатора.
+
+### 8.3. Relayer / executor tests
+
+Проверить:
+
+- executor отправляет claimFor только с proof;
+- executor не повторяет AlreadyClaimed;
+- executor останавливается при GasPaused;
+- executor не работает с неверной сетью;
+- executor signer хранится через KMS/HSM/managed signer или другой защищенный механизм;
+- низкий баланс gas вызывает alert;
+- очередь claimFor сохраняет idempotency;
+- ручной retry не создает двойную выплату.
+
+---
+
+## 9. Oracle and result tests
+
+Проверить:
+
+1. Получение результата из primary provider.
+2. Получение результата из backup providers.
+3. Outcome mismatch переводит событие в ManualReview.
+4. SourceMismatch блокирует settlement.
+5. Mapping ambiguous блокирует автоматическую финализацию.
+6. Provider изменил результат после FinalCandidate.
+7. Событие перенесено.
+8. Событие отменено.
+9. Событие void.
+10. Тираж сокращается до 14.
+11. Тираж сокращается до 13.
+12. Тираж становится void.
+13. Appeal window запускается после публикации результата.
+14. Settlement не стартует во время appeal window.
+15. Manual fallback требует reasonCode и evidenceHash.
+16. Решение, влияющее на выплаты, требует multisig 2 из 3.
+17. Raw provider payload hash сохраняется.
+18. Result manifest версионируется.
+
+---
+
+## 10. Settlement and payout tests
+
+Проверить:
+
+- winner calculation для 15/14/13;
+- отсутствие jackpot payout при 14/13, если это согласованное правило;
+- корректный refund при void;
+- Merkle tree deterministic build;
+- payout manifest hash совпадает с root;
+- total payout amount совпадает с manifest;
+- каждый leaf содержит drawId, rootVersion, user, amount, leafIndex;
+- proof не позволяет изменить recipient;
+- proof не позволяет изменить amount;
+- payout root нельзя активировать при active appeal;
+- payout root нельзя менять после activation без новой версии и процедуры;
+- paid status только после blockchain confirmation.
+
+---
+
+## 11. Admin, RBAC and multisig tests
+
+Проверить:
+
+- MFA для администраторов;
+- RBAC по ролям;
+- read-only доступ Auditor;
+- запрет удаления audit log;
+- запрет изменения audit log;
+- изменение ролей логируется;
+- ручной ввод результата требует роли;
+- emergency action требует reasonCode;
+- действия, влияющие на деньги, требуют multisig 2 из 3;
+- один signer не может выполнить multisig action;
+- 2 из 3 signer могут выполнить действие;
+- повторное исполнение multisig action невозможно;
+- expired proposal не исполняется;
+- все critical actions попадают в audit log.
+
+Дополнительное требование к multisig:
+
+```text
+Ключи multisig 2 из 3 должны храниться у разных лиц и не должны контролироваться одним человеком или одной машиной.
+```
+
+Минимальная модель распределения:
+
+- Founder / owner representative;
+- technical signer;
+- independent trusted signer или operations/security signer.
+
+Запрещено:
+
+- хранить все multisig keys в одном password manager аккаунте;
+- держать все ключи на одном устройстве;
+- использовать один seed для нескольких signer;
+- передавать signer key через chat/email;
+- совмещать executor key и multisig signer key без отдельного решения.
+
+Критические действия:
+
+- pause purchases;
+- pause payouts;
+- manual result proposal;
+- result finalization;
+- payout root publish;
+- payout activation;
+- refund procedure;
+- executor wallet rotation;
+- provider disable;
+- partner suspension, если партнерский модуль включен.
+
+---
+
+## 12. Audit log and data retention tests
+
+Проверить:
+
+- audit log создается для каждого critical action;
+- audit log имеет actorId, role, actionType, entityType, entityId, reasonCode, timestamp;
+- oldValueHash/newValueHash сохраняются для изменений настроек;
+- evidenceLink/evidenceHash обязательны для manual fallback;
+- txHash сохраняется для on-chain действий;
+- audit log нельзя удалить через admin API;
+- audit log нельзя изменить через admin API;
+- audit log export работает для аудитора;
+- срок хранения минимум 5 лет, если юристы не установят другой срок;
+- backup audit logs восстанавливается.
+
+---
+
+## 13. Monitoring and alert tests
+
+Проверить алерты:
+
+- oracle provider down;
+- backup provider down;
+- API quota near limit;
+- source mismatch;
+- mapping ambiguous;
+- result root not published;
+- appeal window failed;
+- payout root not built;
+- payout executor failed;
+- gas reserve low;
+- executor wallet balance low;
+- indexer lag;
+- DB/blockchain mismatch;
+- backup failed;
+- audit log write failed;
+- manual fallback used;
+- suspicious whale activity;
+- affiliate fraud spike, если партнерский модуль включен;
+- KYC/AML provider unavailable, если подключен.
+
+Каждый критический alert должен иметь:
+
+- severity;
+- owner;
+- runbook link;
+- createdAt;
+- acknowledgedAt;
+- resolvedAt;
+- incidentId, если перешел в инцидент.
+
+---
+
+## 14. Backup and restore tests
+
+Нужно тестировать:
+
+- PostgreSQL backup;
+- payout manifests backup;
+- Merkle proofs backup;
+- raw provider payload/hash backup;
+- audit logs backup;
+- configuration backup;
+- deployment metadata backup.
+
+Критически важные артефакты должны иметь отдельный cold backup (холодный резерв):
+
+- payout manifests;
+- Merkle proofs;
+- result manifests;
+- raw provider payload hashes;
+- audit log exports;
+- deployment metadata.
+
+Cold backup должен храниться отдельно от основного production storage, с ограниченным доступом и журналом чтения/записи.
+
+Минимальные проверки:
+
+- ежедневный backup создается;
+- restore drill проходит регулярно;
+- восстановленная база совпадает с контрольными хэшами;
+- payout proofs доступны после восстановления;
+- audit logs доступны после восстановления;
+- RPO/RTO измерены.
+
+Предварительное требование:
+
+```text
+RPO <= 24 часа
+RTO <= 4 часа для критических сервисов MVP
+```
+
+Финальные RPO/RTO подтвердить на инфраструктурном этапе.
+
+---
+
+## 15. Frontend and security UX tests
+
+Проверить:
+
+- интерфейс не просит seed phrase;
+- интерфейс не просит private key;
+- пользователь видит сеть и токен оплаты;
+- пользователь видит итоговую цену до покупки;
+- пользователь видит статус транзакции;
+- пользователь видит статус выплаты;
+- пользователь видит причину blocked country без обходных подсказок;
+- пользователь видит понятный статус при appeal;
+- пользователь видит void/refund status;
+- интерфейс не обещает гарантированный выигрыш;
+- интерфейс не показывает статистику как гарантию;
+- contract addresses берутся из проверенной конфигурации.
+
+---
+
+## 16. Affiliate and analytics security tests
+
+Если в релиз входит партнерский модуль, проверить:
+
+- referral click endpoint rate limited;
+- clickId/subId не позволяют injection;
+- ref code не создает open redirect;
+- forbidden countries не засчитываются;
+- self-referral flag работает;
+- duplicate attribution блокируется;
+- partner не видит KYC/AML details;
+- partner не видит полный risk score;
+- commission changes пишутся в affiliate audit log;
+- CPA cap работает;
+- массовые отклонения начислений требуют human review;
+- CSV export не раскрывает персональные данные.
+
+Если партнерский модуль не входит в релиз, эти тесты остаются в backlog релиза партнерки.
+
+---
+
+## 17. Performance and load tests
+
+Минимальные нагрузочные проверки:
+
+- открытие Current Draw при обычной нагрузке;
+- массовая покупка билетов перед закрытием продаж;
+- обработка TicketPurchased indexer-ом;
+- build payoutRoot для ожидаемого числа победителей;
+- proof API при пике запросов;
+- executor queue при массовых выплатах;
+- admin dashboard при большом количестве логов;
+- audit log write throughput;
+- restore после нагрузки.
+
+Цель:
+
+```text
+Система не должна терять события, proof, audit log или payout status под нагрузкой.
+```
+
+Нагрузочные тесты должны покрывать не только обычную нагрузку, но и пиковые значения, близкие к лимитам системы.
+
+Предварительные стресс-сценарии:
+
+- резкий пик покупок перед закрытием продаж;
+- 10 000 purchase attempts в минуту как тестовый ориентир, не как обещанная производительность;
+- 100 000 комбинаций в одном тираже как тестовый ориентир для settlement/proof pipeline;
+- массовые запросы к proof API после публикации payoutRoot;
+- массовая очередь claimFor у executor;
+- одновременный рост audit log и admin dashboard traffic.
+
+Финальные численные цели должны быть подтверждены на инфраструктурном этапе после выбора backend stack, RPC provider и hosting.
+
+---
+
+## 18. Test environments
+
+Нужны окружения:
+
+| Окружение | Назначение |
+|---|---|
+| Local | разработка и unit tests |
+| CI | автоматические тесты на каждый pull request |
+| Staging | интеграционные тесты backend/admin/oracle |
+| Testnet | dry run с контрактами и тестовым USDC |
+| Mainnet | production после security gate |
+
+Требования:
+
+- production secrets не используются в lower environments;
+- testnet deployment повторяет production configuration настолько, насколько возможно;
+- testnet dry run должен пройти полный цикл тиража;
+- staging данные не должны содержать реальные чувствительные данные;
+- CI не должен хранить приватные ключи в открытом виде.
+
+---
+
+## 19. CI/CD security gates
+
+Перед merge:
+
+- unit tests pass;
+- lint pass;
+- static analysis pass;
+- no secrets in repo scan;
+- dependency audit без critical issues или с documented exception;
+- smart contract tests pass.
+
+Перед staging:
+
+- integration tests pass;
+- migrations tested;
+- RBAC tests pass;
+- monitoring checks pass.
+
+Перед mainnet:
+
+- external audit completed;
+- critical/high findings fixed or formally accepted;
+- testnet dry run completed;
+- incident response runbook ready;
+- backup restore drill completed;
+- multisig signers verified;
+- production secrets configured;
+- launch checklist signed off.
+
+---
+
+## 20. External audit
+
+Перед mainnet нужен внешний аудит smart contracts и критических backend компонентов.
+
+Рекомендуемый стандарт:
+
+```text
+Для зрелого production запуска желательно два независимых аудита или один внешний аудит + независимая повторная проверка исправлений.
+```
+
+Для MVP обязательный минимум:
+
+- один внешний аудит;
+- исправление critical/high findings;
+- regression tests для исправлений;
+- re-audit или remediation review по исправленным critical/high findings.
+
+Минимальный scope:
+
+- smart contracts;
+- Merkle settlement;
+- payout/refund logic;
+- roles and multisig;
+- pause/emergency controls;
+- backend root builder;
+- proof API;
+- executor/relayer;
+- oracle result pipeline;
+- admin critical actions;
+- audit log integrity.
+
+Аудиторам нужно передать:
+
+- текущее ТЗ;
+- architecture diagram;
+- contract source code;
+- deployment scripts;
+- тесты;
+- инварианты;
+- threat model;
+- known limitations;
+- open questions;
+- runbook critical workflows.
+
+Запуск mainnet запрещен, если:
+
+- есть unresolved critical finding;
+- есть unresolved high finding без формального risk acceptance;
+- не пройден testnet dry run;
+- нет backup/restore проверки;
+- нет multisig signer verification.
+
+---
+
+## 21. Audit remediation
+
+Процесс исправления:
+
+1. Получить audit report.
+2. Разделить findings по severity.
+3. Для каждого finding определить owner.
+4. Исправить critical/high.
+5. Добавить regression test.
+6. Провести повторную проверку.
+7. Зафиксировать accepted risks, если что-то не исправляется.
+8. Обновить release checklist.
+
+Severity:
+
+| Severity | Правило |
+|---|---|
+| Critical | блокирует запуск |
+| High | блокирует запуск без formal risk acceptance |
+| Medium | исправить до запуска или принять письменно |
+| Low | исправить до или после запуска по плану |
+| Informational | учесть в backlog |
+
+---
+
+## 22. Testnet dry run
+
+Testnet dry run должен пройти полный цикл:
+
+1. Deploy contracts.
+2. Configure roles.
+3. Configure multisig.
+4. Create draw.
+5. Add 15 events.
+6. Open draw.
+7. Buy tickets.
+8. Trigger risk limits.
+9. Lock draw.
+10. Pull oracle results.
+11. Create mismatch scenario.
+12. Run manual fallback.
+13. Open and close appeal window.
+14. Build settlement.
+15. Publish resultRoot.
+16. Publish payoutRoot.
+17. Execute automatic claimFor.
+18. Execute user fallback claim.
+19. Run refund scenario.
+20. Pause and resume payouts.
+21. Export audit log.
+22. Restore backup in staging.
+23. Produce final dry run report.
+
+---
+
+## 23. Incident response
+
+Нужен incident response plan (план реагирования на инциденты).
+
+Инциденты:
+
+- suspected exploit;
+- wrong result published;
+- wrong payoutRoot published;
+- executor key compromised;
+- oracle provider compromised;
+- admin account compromised;
+- audit log write failed;
+- database corruption;
+- proof lost;
+- mass payout failure;
+- sanctions/AML emergency;
+- data leak.
+
+Для каждого инцидента нужен:
+
+- severity;
+- owner;
+- immediate action;
+- pause requirement;
+- user communication;
+- evidence collection;
+- recovery plan;
+- postmortem.
+
+Если инцидент затрагивает пользовательские средства, персональные данные или юридически значимые ограничения, заранее должны быть подготовлены:
+
+- публичный шаблон сообщения пользователям;
+- внутренний шаблон incident report;
+- юридическая процедура уведомления регуляторов, если она требуется лицензией или страной запуска;
+- список ответственных за коммуникацию;
+- правило, кто утверждает публичное сообщение.
+
+---
+
+## 24. Bug bounty / private security review
+
+Рекомендуемая последовательность:
+
+```text
+internal review -> external audit -> remediation -> private security review -> limited bug bounty -> public bug bounty later
+```
+
+Для MVP не рекомендуется сразу открывать публичный bug bounty до исправления audit findings.
+
+Перед публичным bug bounty нужно утвердить:
+
+- scope;
+- out-of-scope список;
+- severity matrix;
+- минимальные и максимальные вознаграждения;
+- процедуру приема отчетов;
+- срок первичного ответа;
+- правила coordinated disclosure;
+- ответственного за triage.
+
+Возможные платформы: Immunefi, HackenProof или аналог. Финальный выбор платформы остается открытым вопросом.
+
+Минимальный scope private review:
+
+- smart contracts;
+- payout/refund logic;
+- proof API;
+- executor;
+- oracle result pipeline;
+- admin critical actions.
+
+Вне scope на старте:
+
+- social engineering;
+- DDoS;
+- spam без impact;
+- партнерские споры без security impact;
+- UI cosmetic issues.
+
+---
+
+## 25. Security documentation
+
+Перед запуском должны быть готовы:
+
+- threat model;
+- architecture diagram;
+- list of contracts and addresses;
+- roles and permissions matrix;
+- key management policy;
+- deployment checklist;
+- emergency pause runbook;
+- oracle incident runbook;
+- payout incident runbook;
+- backup/restore runbook;
+- audit report;
+- audit remediation report;
+- testnet dry run report.
+
+Key management policy должна отдельно описывать:
+
+- где хранятся multisig keys;
+- где хранится executor signer;
+- где хранятся API keys;
+- кто имеет доступ;
+- как выполняется key rotation;
+- как выполняется emergency key rotation;
+- что делать при компрометации signer;
+- какие ключи запрещено хранить в env-файлах и репозитории.
+
+---
+
+## 26. Открытые вопросы
+
+| Вопрос | Статус |
+|---|---|
+| Финальная auditor company | TBD |
+| Bug bounty platform | TBD |
+| Финальный CI/CD stack | TBD |
+| Финальный secrets manager | TBD |
+| Финальные RPO/RTO | TBD после инфраструктурного решения |
+| Финальная политика upgradeability | Для MVP non-upgradeable, proxy только отдельным решением |
+| Финальный KYC provider | Этап 12 / запуск |
+| Финальный RPC provider | Инфраструктура |
+| Финальный формат public audit summary | TBD |
+
+---
+
+## 27. Принятые и отклоненные замечания внешнего анализа
+
+### 27.1. Принимаем
+
+Принимаем:
+
+- усилить external audit scope правилом re-audit/remediation review;
+- добавить требование, что multisig keys должны храниться у разных лиц;
+- добавить cold backup для Merkle proofs, payout manifests, result manifests и audit exports;
+- добавить правила подготовки публичного bug bounty;
+- добавить публичные и юридические шаблоны incident response для инцидентов с деньгами или данными;
+- усилить indexer tests reorg-сценариями на несколько блоков и падением во время записи;
+- усилить performance tests пиковыми сценариями;
+- явно раскрыть key management policy в security documentation.
+
+### 27.2. Не принимаем как обязательное для MVP
+
+Не принимаем как обязательное для MVP:
+
+- требование двух независимых внешних аудитов перед первым запуском.
+
+Обоснование:
+
+```text
+Два независимых аудита - сильный стандарт для зрелого production запуска,
+но для MVP это может непропорционально увеличить стоимость и срок.
+Обязательный минимум: один внешний аудит + исправление critical/high + remediation review.
+```
+
+---
+
+## 28. Решения для согласования
+
+| # | Решение | Рекомендованный статус | Комментарий |
+|---:|---|---|---|
+| 1 | Mainnet запуск запрещен без security gate. | Согласовать | Защита пользовательских средств. |
+| 2 | External audit обязателен перед mainnet. | Согласовать | Особенно для smart contracts и выплат. |
+| 3 | Critical audit findings блокируют запуск. | Согласовать | Без исключений. |
+| 4 | High findings блокируют запуск без formal risk acceptance. | Согласовать | Нужна письменная ответственность. |
+| 5 | Testnet dry run обязателен. | Согласовать | Проверяет полный цикл продукта. |
+| 6 | Invariant/fuzz tests обязательны для контрактов. | Согласовать | Обычных unit tests недостаточно. |
+| 7 | Audit log нельзя удалить или изменить через admin API. | Согласовать | Ключевой контроль расследований. |
+| 8 | Manual fallback требует reasonCode, evidence и audit log. | Согласовать | Защита от ручной подмены результата. |
+| 9 | Multisig 2 из 3 обязателен для действий, влияющих на деньги. | Согласовать | Снижает риск одного компрометированного администратора. |
+| 10 | Public bug bounty не запускаем до аудита и remediation. | Согласовать | Сначала закрытая проверка. |
+| 11 | Backup/restore drill обязателен до mainnet. | Согласовать | Proof и audit log нельзя потерять. |
+| 12 | Партнерские security tests обязательны только если партнерский модуль входит в релиз. | Согласовать | Не блокирует core launch. |
+| 13 | Для MVP обязателен один внешний аудит + remediation review. | Согласовать | Два аудита рекомендуются, но не обязательны для MVP. |
+| 14 | Multisig keys должны храниться у разных лиц. | Согласовать | Иначе multisig превращается в формальность. |
+| 15 | Merkle proofs и payout manifests должны иметь cold backup. | Согласовать | Без proof нельзя доказать право на выплату. |
+| 16 | Public bug bounty запускается только после утверждения scope и reward rules. | Согласовать | Иначе triage станет хаотичным. |
+
+---
+
+## 29. Acceptance criteria
+
+Этап 14 считается согласованным, если:
+
+- описана threat model;
+- определены критические активы;
+- описаны smart contract tests;
+- описаны invariant tests;
+- описаны fuzz tests;
+- описаны backend/indexer/relayer tests;
+- описаны oracle tests;
+- описаны settlement/payout tests;
+- описаны admin/RBAC/multisig tests;
+- описаны audit log tests;
+- описаны monitoring and alert tests;
+- описаны backup/restore tests;
+- описан external audit scope;
+- описан audit remediation process;
+- описан testnet dry run;
+- описан incident response;
+- описан bug bounty/private review подход;
+- зафиксированы решения для согласования;
+- зафиксированы открытые вопросы.
+
+---
+
+## 30. Итог
+
+Этап 14 фиксирует, что OX нельзя запускать только потому, что функциональность работает на happy path.
+
+Нужно доказать:
+
+```text
+деньги не теряются,
+выплаты не дублируются,
+результаты не подменяются,
+администратор не может тайно изменить критические данные,
+логи сохраняются,
+аварийные сценарии управляемы,
+а аудиторы могут проверить весь путь от билета до выплаты.
+```

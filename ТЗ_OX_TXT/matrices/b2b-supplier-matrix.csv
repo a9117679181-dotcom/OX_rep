@@ -1,0 +1,2 @@
+jurisdiction,b2b_supplier_model_possible,status,does_supplier_need_local_approval,operator_can_use_external_software,co_operator_risk,notes,key_sources
+Nigeria,Yes but not confirmed,UNCLEAR,UNCLEAR,LIKELY,HIGH,"Application evidence includes certified software, software architecture and SLA with software operator; OX controls events/rules/pool/smart contract/payouts, so direct approval or co-operator treatment must be checked.",NGA-GAM-001

@@ -1,0 +1,1063 @@
+# OX - Этап 11. Админ-панель
+
+Дата: 09.06.2026  
+Версия: v1  
+Проект: OX, спортивный экспресс  
+Стартовый продукт: Суперэкспресс 15  
+Будущий продукт: Мегаэкспресс 16  
+Девиз: Честно. Прозрачно. Мгновенно.
+
+---
+
+## 1. Назначение этапа
+
+Этап 11 описывает Admin Panel (админ-панель) OX: внутренний интерфейс для команды проекта, через который управляются тиражи, события, результаты, ручные исключения, выплаты, мониторинг, алерты и журналы действий.
+
+Этот этап отвечает на вопросы:
+
+- какие роли нужны в админ-панели;
+- кто может создавать тиражи;
+- как добавляются 15 событий Суперэкспресса;
+- как в будущем подключается Cron (автоматический планировщик);
+- как контролируется risk engine (модуль риска);
+- как контролируется oracle service (сервис спортивных результатов);
+- как обрабатываются апелляции;
+- как запускается settlement (расчет победителей);
+- как контролируется payout executor (исполнитель выплат);
+- как мониторится gas reserve (резерв газа);
+- какие действия требуют multisig 2 из 3;
+- как ведется audit log (журнал действий);
+- какие отчеты нужны команде и аудиторам.
+
+Связь с предыдущими этапами:
+
+- Этап 2 определяет жизненный цикл тиража.
+- Этап 5 определяет защиту от кита.
+- Этап 6 определяет автоматические выплаты.
+- Этап 7 определяет оракул и спортивные результаты.
+- Этап 8 определяет смарт-контракты.
+- Этап 9 определяет backend API, indexer и payout executor.
+- Этап 10 определяет пользовательский интерфейс.
+
+Главное правило:
+
+```text
+админ-панель управляет операциями, но не должна давать возможность незаметно изменить деньги, результаты или выплаты.
+```
+
+---
+
+## 2. Продуктовая цель админ-панели
+
+Админ-панель нужна для безопасного запуска и обслуживания MVP.
+
+В MVP OX еще не является полностью автономным продуктом. Команда должна:
+
+- вручную создавать первые тиражи;
+- вручную подбирать 15 событий;
+- проверять корректность источников данных;
+- видеть риск кита до открытия продаж;
+- контролировать спорные результаты;
+- видеть состояние выплат;
+- реагировать на технические сбои;
+- фиксировать каждое ручное действие.
+
+Цель:
+
+```text
+дать команде полный контроль над операционным процессом без возможности скрытых манипуляций.
+```
+
+---
+
+## 3. MVP scope
+
+В MVP админ-панели входит:
+
+- безопасный вход администратора;
+- роли и права доступа;
+- MFA (двухфакторная защита) для критических ролей;
+- Dashboard (операционный дашборд);
+- Draw Management (управление тиражами);
+- Event Management (управление событиями);
+- ручное формирование списка 15 событий;
+- подготовка к будущей автоматизации через Cron;
+- Risk Control (контроль риска кита);
+- управление comboPrice до открытия тиража;
+- Oracle Control (контроль спортивных результатов);
+- Manual Fallback (ручной резервный ввод результата);
+- Appeal Management (управление апелляциями);
+- Settlement Control (контроль расчета победителей);
+- Payout Control (контроль выплат);
+- Gas Monitoring (мониторинг газа);
+- Monitoring & Alerts (мониторинг и алерты);
+- Audit Log (журнал действий);
+- Reports (отчеты);
+- Emergency Controls (аварийные действия).
+
+В MVP не входит:
+
+- произвольное редактирование выплат после публикации payoutRoot;
+- прямое ручное списание пользовательских средств;
+- удаление audit log;
+- произвольное редактирование базы данных из интерфейса;
+- маркетинговая партнерская аналитика;
+- финальное юридическое решение по KYC threshold;
+- полностью автономный выбор событий без контроля администратора.
+
+---
+
+## 4. Основные разделы админ-панели
+
+Структура MVP:
+
+```text
+Admin Login
+Dashboard
+Draws
+Events
+Risk
+Oracle
+Appeals
+Settlement
+Payouts
+Gas
+Monitoring
+Users / KYC Status
+Reports
+Audit Log
+Settings
+Emergency
+```
+
+| Раздел | Назначение |
+|---|---|
+| Admin Login | вход администратора |
+| Dashboard | общая операционная картина |
+| Draws | управление тиражами |
+| Events | управление спортивными событиями |
+| Risk | защита от кита и comboPrice |
+| Oracle | контроль спортивных результатов |
+| Appeals | апелляции и спорные случаи |
+| Settlement | расчет победителей |
+| Payouts | автоматические выплаты и manual claim |
+| Gas | резерв газа и executor wallet |
+| Monitoring | технические алерты |
+| Users / KYC Status | статусы пользователей без лишних персональных данных |
+| Reports | отчеты по тиражам |
+| Audit Log | журнал действий |
+| Settings | настройки с ограниченными правами |
+| Emergency | аварийные процедуры |
+
+---
+
+## 5. Роли и доступы
+
+Админ-панель должна использовать RBAC (role-based access control, управление доступом по ролям).
+
+Минимальные роли MVP:
+
+| Роль | Назначение |
+|---|---|
+| SuperAdmin | полный операционный доступ, кроме действий, требующих multisig |
+| DrawManager | создание и подготовка тиражей |
+| EventManager | добавление и проверка событий |
+| RiskManager | просмотр risk report и предложение comboPrice |
+| OracleOperator | контроль результатов и provider status |
+| PayoutOperator | контроль очереди выплат |
+| SupportOperator | просмотр статусов пользователей и билетов |
+| ComplianceViewer | просмотр KYC/compliance статусов без лишних персональных данных |
+| Auditor | read-only доступ к журналам и отчетам |
+| EmergencySigner | участник multisig 2 из 3 для критических действий |
+
+Правила:
+
+- один пользователь может иметь несколько ролей;
+- критические действия не должны выполняться одним человеком без подтверждения;
+- Auditor не может менять данные;
+- SupportOperator не может видеть приватные технические ключи;
+- PayoutOperator не может изменить payout amount;
+- OracleOperator не может незаметно финализировать спорный результат без лога.
+
+---
+
+## 6. Вход администратора
+
+Admin Login должен включать:
+
+- email/login;
+- пароль;
+- MFA;
+- session timeout;
+- IP allowlist для критических ролей, если применимо;
+- журнал входов;
+- блокировку после подозрительных попыток;
+- forced logout при компрометации учетной записи.
+
+Запрещено:
+
+- общие аккаунты для нескольких сотрудников;
+- вход без MFA для критических ролей;
+- хранение паролей в открытом виде;
+- доступ к production (боевой среде) через тестовые учетные записи.
+
+---
+
+## 7. Dashboard
+
+Dashboard должен показывать общую картину:
+
+- текущий активный тираж;
+- статус тиража;
+- время до закрытия продаж;
+- количество купленных билетов;
+- количество комбинаций;
+- prize pool;
+- jackpot;
+- comboPrice;
+- riskRatio;
+- oracle status;
+- appeal status;
+- settlement status;
+- payout status;
+- gasCoverageRatio;
+- executor wallet balance;
+- critical alerts;
+- последние ручные действия;
+- последние ошибки.
+
+Цель:
+
+```text
+администратор должен за 30 секунд понять, все ли работает нормально.
+```
+
+---
+
+## 8. Draw Management
+
+Draw Management управляет жизненным циклом тиража.
+
+Функции MVP:
+
+- создать Draft (черновик);
+- выбрать продукт: Суперэкспресс 15;
+- указать drawId;
+- указать время открытия;
+- указать время закрытия;
+- добавить 15 событий;
+- проверить корректность событий;
+- запустить risk check;
+- установить comboPrice до Open;
+- перевести Draft -> Prepared;
+- открыть продажи Prepared -> Open;
+- закрыть продажи Open -> Locked;
+- поставить тираж на pause;
+- отменить тираж при критическом сбое;
+- включить refund-сценарий при выполнении условий.
+
+Правила:
+
+- после Open нельзя менять список событий без специальной аварийной процедуры;
+- после Open нельзя менять правила распределения;
+- comboPrice можно менять только до Open;
+- draw не может перейти в Open без risk report;
+- draw не может перейти в Open без 15 валидных событий;
+- draw не может перейти в Open без проверки времени старта событий;
+- draw не может перейти в Open при riskRatio >= 1.00.
+
+---
+
+## 9. Event Management
+
+Event Management нужен для ручного формирования списка 15 событий в MVP.
+
+Для каждого события админ должен видеть:
+
+- eventId;
+- sport;
+- league;
+- home team;
+- away team;
+- start time;
+- market template;
+- доступные исходы;
+- provider mapping;
+- source status;
+- percentage 1 / X / 2;
+- basic sports statistics status;
+- event status.
+
+Функции:
+
+- добавить событие;
+- заменить событие до Open;
+- проверить provider mapping;
+- проверить время старта;
+- проверить доступность 1 / X / 2;
+- проверить проценты 1 / X / 2;
+- проверить базовую статистику;
+- отметить событие как подозрительное;
+- отправить событие в ManualReview.
+
+Правила:
+
+- MVP поддерживает ручной выбор 15 событий;
+- будущая автоматизация через Cron должна быть заложена архитектурно;
+- Cron может предлагать список событий, но человек подтверждает его до полной автоматизации;
+- событие нельзя менять после Locked без аварийной процедуры;
+- все изменения события логируются.
+
+---
+
+## 10. Cron Automation
+
+Cron (автоматический планировщик) не обязан полностью управлять MVP, но архитектура должна быть готова.
+
+Будущий режим:
+
+```text
+Cron -> собирает кандидатов событий -> проверяет правила -> создает draft -> админ подтверждает -> draw prepared
+```
+
+MVP-режим:
+
+```text
+админ вручную создает draw и вручную добавляет 15 событий.
+```
+
+Требования к будущей автоматизации:
+
+- фильтр по времени начала событий;
+- фильтр по доступности результатов через API;
+- фильтр по видам спорта;
+- фильтр по лигам;
+- фильтр по доступности 1 / X / 2;
+- исключение событий с высоким риском отмены;
+- проверка provider mapping;
+- ручное подтверждение перед Open.
+
+---
+
+## 11. Risk Control
+
+Risk Control отображает защиту от кита.
+
+Админ должен видеть:
+
+- totalCombinations;
+- soldCombinations;
+- uniqueCoverage;
+- jackpot;
+- prize pool;
+- currentComboPrice;
+- requiredComboPrice;
+- riskRatio;
+- targetRiskRatio;
+- recommended action;
+- whale warning;
+- историю изменения comboPrice.
+
+Действия:
+
+- запустить risk recalculation;
+- принять recommended comboPrice до Open;
+- отклонить рекомендацию с reasonCode;
+- заблокировать Open при критическом риске;
+- сформировать risk report.
+
+Правила:
+
+- если riskRatio >= 1.00, draw cannot Open;
+- повышение comboPrice возможно только до Open;
+- каждое изменение comboPrice логируется;
+- админ должен видеть объяснение, почему цена повышается.
+
+---
+
+## 12. Oracle Control
+
+Oracle Control показывает работу спортивных источников.
+
+Админ должен видеть:
+
+- primary API status;
+- backup API 1 status;
+- backup API 2 status;
+- provider health;
+- API quota usage;
+- last polling time;
+- result candidates;
+- source mismatch;
+- manual review queue;
+- raw payload hash/storage reference;
+- resultRoot status.
+
+Функции:
+
+- увидеть результат каждого источника;
+- сравнить результаты;
+- отправить событие в ManualReview;
+- подтвердить FinalCandidate;
+- запустить повторный polling;
+- увидеть причину SourceMismatch;
+- сформировать oracle report.
+
+Правила:
+
+- один API не должен быть единственным основанием для денежного результата;
+- спорный результат не финализируется без проверки;
+- ручное вмешательство всегда логируется;
+- ручной ввод результата, влияющий на выплаты, требует multisig 2 из 3.
+
+---
+
+## 13. Manual Fallback
+
+Manual Fallback (ручной резервный сценарий) нужен при сбое оракула или источников данных.
+
+Сценарии:
+
+- primary API недоступен;
+- backup API расходятся;
+- событие перенесено;
+- событие отменено;
+- источник изменил результат;
+- mapping ambiguous;
+- result polling не завершился;
+- результат влияет на jackpot/payout.
+
+Обязательные поля ручного действия:
+
+- drawId;
+- eventId;
+- actionType;
+- oldValue;
+- newValue;
+- reasonCode;
+- evidence link/hash;
+- actor;
+- timestamp;
+- requiredApproval;
+- approval status;
+- txHash, если действие связано со смарт-контрактом.
+
+Критические ручные действия:
+
+| Действие | Требование |
+|---|---|
+| ручной ввод результата | multisig 2 из 3 |
+| исключение события из расчета | multisig 2 из 3 |
+| отмена результата | multisig 2 из 3 |
+| публикация новой версии resultRoot | контролируемая процедура |
+| включение refund | multisig 2 из 3 |
+
+---
+
+## 14. Appeal Management
+
+Админ-панель должна поддерживать окно апелляции.
+
+Базовая логика:
+
+```text
+FinalCandidate -> AppealWindow 6 часов -> FinalConfirmed -> Settlement
+```
+
+Админ должен видеть:
+
+- открытые апелляции;
+- drawId;
+- eventId;
+- пользователь/адрес;
+- причина апелляции;
+- доказательства;
+- статус рассмотрения;
+- решение;
+- кто принял решение;
+- время решения.
+
+Правила:
+
+- settlement нельзя запускать при active appeal;
+- решение по апелляции логируется;
+- если апелляция меняет результат, нужен multisig 2 из 3;
+- пользовательский интерфейс должен получить обновленный статус.
+
+---
+
+## 15. Settlement Control
+
+Settlement Control управляет расчетом победителей.
+
+Админ должен видеть:
+
+- FinalConfirmed status;
+- validEventsCount;
+- ticket count;
+- combination count;
+- settlement job status;
+- settlement report;
+- jackpot winners;
+- payout levels;
+- refund list;
+- payout manifest draft;
+- manifestHash;
+- errors.
+
+Действия:
+
+- запустить settlement;
+- пересчитать settlement до публикации root;
+- остановить settlement при ошибке;
+- отправить отчет на review;
+- подтвердить manifest перед Merkle build.
+
+Правила:
+
+- settlement нельзя запускать до FinalConfirmed;
+- settlement нельзя запускать при active appeal;
+- settlement нельзя запускать при несинхронизированном indexer;
+- payout amount нельзя менять после публикации payoutRoot без отмены root и новой версии.
+
+---
+
+## 16. Payout Control
+
+Payout Control показывает автоматические выплаты.
+
+Админ должен видеть:
+
+- payoutRoot;
+- rootVersion;
+- total payout amount;
+- payout count;
+- auto payout queue;
+- confirmed payouts;
+- failed payouts;
+- retry count;
+- BlockedKYC;
+- BlockedCompliance;
+- ManualClaimAvailable;
+- RefundReady;
+- AlreadyClaimed;
+- txHash;
+- executor status.
+
+Функции:
+
+- увидеть очередь выплат;
+- фильтровать выплаты;
+- перезапустить retry для отдельных выплат;
+- поставить payout pause;
+- снять payout pause;
+- открыть manual claim для пользователя;
+- сформировать payout report.
+
+Правила:
+
+- PayoutOperator не может изменить amount;
+- PayoutOperator не может изменить recipient;
+- executor не должен отправлять claimFor без proof;
+- same leaf cannot be paid twice;
+- paid status только после blockchain confirmation.
+
+---
+
+## 17. Gas Monitoring
+
+Gas Monitoring нужен из-за решения оплачивать газ проекта за автоматические выплаты.
+
+Админ должен видеть:
+
+- gasReserve;
+- executor wallet balance;
+- gasCoverageRatio;
+- estimatedGasCost;
+- retry cost;
+- root publish cost;
+- claimFor cost;
+- failed transaction rate;
+- gas spike alerts.
+
+Алерты:
+
+- gasCoverageRatio < 1.0;
+- executor wallet balance ниже порога;
+- резкий рост gas;
+- очередь выплат растет;
+- executor wallet не отвечает;
+- RPC provider недоступен.
+
+Правило:
+
+```text
+GasPaused останавливает новые автоматические выплаты, но не отменяет право пользователя на выплату.
+```
+
+---
+
+## 18. Monitoring & Alerts
+
+Админ-панель должна показывать техническое состояние системы.
+
+Категории:
+
+- API status;
+- database status;
+- indexer status;
+- RPC status;
+- oracle status;
+- payout executor status;
+- job queue status;
+- backup status;
+- storage status;
+- API quota;
+- suspicious activity.
+
+Критические алерты:
+
+- indexer lag;
+- source mismatch;
+- failed settlement;
+- proof missing;
+- payout queue stuck;
+- gas reserve low;
+- executor wallet low;
+- API provider down;
+- backup failed;
+- audit log write failed;
+- admin suspicious login;
+- riskRatio critical.
+
+Каждый alert должен иметь:
+
+- severity;
+- timestamp;
+- service;
+- message;
+- recommended action;
+- owner;
+- status;
+- resolution note.
+
+---
+
+## 19. Users / KYC Status
+
+Админ-панель должна показывать только необходимые пользовательские статусы.
+
+MVP поля:
+
+- wallet address;
+- userId, если есть;
+- KYC status;
+- compliance status;
+- ticket count;
+- active payouts;
+- blocked payouts;
+- support notes;
+- linked tickets.
+
+KYC threshold не фиксируется в этом этапе:
+
+```text
+KYC threshold = TBD, переносится в этап 12 "Комплаенс и риски".
+```
+
+Правила:
+
+- лишние персональные данные не показывать;
+- доступ к KYC данным только по роли;
+- все просмотры чувствительных данных логируются;
+- SupportOperator видит только нужный минимум.
+
+---
+
+## 20. Reports
+
+Reports нужны для внутренней проверки и внешнего аудита.
+
+Типы отчетов:
+
+- draw report;
+- event report;
+- risk report;
+- oracle report;
+- appeal report;
+- settlement report;
+- payout report;
+- gas report;
+- incident report;
+- audit report.
+
+Каждый отчет должен включать:
+
+- drawId;
+- период;
+- источник данных;
+- итоговые статусы;
+- hash/root, если применимо;
+- txHash, если применимо;
+- manual actions;
+- responsible actor;
+- createdAt;
+- export format.
+
+MVP export:
+
+```text
+CSV / PDF / JSON после технического выбора.
+```
+
+---
+
+## 21. Audit Log
+
+Audit Log (журнал действий) обязателен.
+
+Логируются:
+
+- вход администратора;
+- создание тиража;
+- изменение события;
+- изменение comboPrice;
+- открытие/закрытие тиража;
+- ручной ввод результата;
+- апелляция;
+- запуск settlement;
+- публикация root;
+- pause/resume;
+- retry выплат;
+- изменение ролей;
+- просмотр чувствительных данных;
+- аварийные действия.
+
+Минимальные поля:
+
+```text
+auditId
+actorId
+role
+actionType
+entityType
+entityId
+oldValueHash
+newValueHash
+reasonCode
+ipAddress
+userAgent
+timestamp
+approvalStatus
+txHash
+```
+
+Правила:
+
+- audit log нельзя удалить через админ-панель;
+- правки audit log запрещены;
+- срок хранения минимум 5 лет, если подтвердит юридический этап;
+- критические действия должны иметь reasonCode;
+- аудиторы получают read-only доступ.
+
+---
+
+## 22. Settings
+
+Settings должны быть ограничены.
+
+Разрешенные настройки MVP:
+
+- отображение активных продуктов;
+- пороги алертов;
+- non-critical UI flags;
+- provider priority, если это не влияет на финальный денежный результат без проверки;
+- notification recipients;
+- maintenance mode.
+
+Запрещено менять через обычные Settings:
+
+- распределение призового фонда;
+- jackpot rules;
+- smart contract addresses без secure procedure;
+- payoutRoot;
+- resultRoot;
+- KYC threshold без комплаенс-решения;
+- admin roles без лога и прав доступа.
+
+---
+
+## 23. Emergency Controls
+
+Emergency Controls нужны для аварийных ситуаций.
+
+Сценарии:
+
+- oracle critical failure;
+- API provider outage;
+- exploit suspected;
+- payout executor compromised;
+- wrong result published;
+- indexer mismatch;
+- gas reserve depleted;
+- suspicious whale behavior;
+- smart contract pause required.
+
+Действия:
+
+- pause draw;
+- pause payouts;
+- pause purchases;
+- force ManualReview;
+- start refund procedure;
+- rotate executor wallet;
+- disable provider;
+- create incident report.
+
+Требования:
+
+- критические emergency actions требуют multisig 2 из 3;
+- действие должно иметь reasonCode;
+- действие должно быть видно в audit log;
+- пользовательский интерфейс должен получить понятный статус;
+- после инцидента нужен incident report.
+
+---
+
+## 24. Multisig 2 из 3
+
+Multisig 2 из 3 нужен для критических действий.
+
+Критические действия:
+
+- отмена тиража после Open;
+- ручной ввод результата, влияющего на выплаты;
+- исключение события из расчета;
+- публикация новой версии resultRoot;
+- отмена payoutRoot;
+- включение refund;
+- emergency pause смарт-контракта;
+- изменение критических ролей;
+- изменение contract address/config в production.
+
+UI должен показывать:
+
+- action requested;
+- requested by;
+- required signatures;
+- collected signatures;
+- expiration time;
+- reasonCode;
+- evidence;
+- final status.
+
+Правило:
+
+```text
+одно лицо не должно иметь возможность провести критическое действие в одиночку.
+```
+
+---
+
+## 25. Admin API integration
+
+Админ-панель использует Admin API из этапа 9.
+
+Ключевые endpoints:
+
+```text
+POST /admin/draws
+POST /admin/draws/{drawId}/prepare
+POST /admin/draws/{drawId}/open
+POST /admin/draws/{drawId}/lock
+POST /admin/draws/{drawId}/pause
+POST /admin/draws/{drawId}/resume
+POST /admin/draws/{drawId}/cancel
+
+POST /admin/draws/{drawId}/events
+POST /admin/events/{eventId}/provider-mapping
+
+GET /admin/risk/draws/{drawId}
+POST /admin/risk/draws/{drawId}/recalculate
+
+GET /admin/oracle/draws/{drawId}
+POST /admin/oracle/draws/{drawId}/poll
+POST /admin/oracle/events/{eventId}/manual-result
+
+POST /admin/draws/{drawId}/settlement
+POST /admin/draws/{drawId}/payout-root
+
+GET /admin/payouts
+POST /admin/payouts/{payoutId}/retry
+POST /admin/payouts/pause
+POST /admin/payouts/resume
+
+GET /admin/audit-log
+GET /admin/alerts
+```
+
+Финальный список endpoints уточняется при backend development.
+
+---
+
+## 26. UI states
+
+Для админ-панели нужны состояния:
+
+```text
+Loading
+Ready
+Empty
+Error
+Unauthorized
+Forbidden
+PendingApproval
+BlockedByState
+BlockedByRisk
+BlockedByAppeal
+BlockedByIndexer
+Maintenance
+```
+
+Ошибки должны объяснять:
+
+- что произошло;
+- почему действие нельзя выполнить;
+- что нужно сделать дальше;
+- кто должен подтвердить действие.
+
+---
+
+## 27. Security requirements
+
+Обязательные требования:
+
+- MFA для критических ролей;
+- RBAC;
+- least privilege;
+- audit log;
+- session timeout;
+- CSRF protection, если применимо;
+- rate limit на admin endpoints;
+- IP allowlist для production, если применимо;
+- no secrets in frontend;
+- no private keys in admin panel;
+- read-only режим для аудиторов;
+- separate production/staging environments.
+
+Запрещено:
+
+- хранить приватные ключи в админ-панели;
+- показывать secrets;
+- выполнять SQL-запросы из UI;
+- удалять логи;
+- обходить workflow через скрытую кнопку;
+- использовать общие учетные записи.
+
+---
+
+## 28. Тестовые сценарии
+
+MVP должен пройти:
+
+1. Admin входит с MFA.
+2. DrawManager создает Draft.
+3. EventManager добавляет 15 событий.
+4. RiskManager запускает risk recalculation.
+5. При riskRatio >= 1.00 Open блокируется.
+6. ComboPrice меняется до Open и логируется.
+7. Draw переводится Prepared -> Open.
+8. После Open событие нельзя заменить обычным действием.
+9. Oracle показывает primary + 2 backup статусы.
+10. SourceMismatch переводит событие в ManualReview.
+11. Ручной ввод результата требует multisig 2 из 3.
+12. Appeal блокирует settlement.
+13. Settlement нельзя запустить до FinalConfirmed.
+14. PayoutOperator видит очередь выплат.
+15. Retry выплаты не меняет amount и recipient.
+16. GasPaused отображается в админке и пользовательском UI.
+17. Низкий executor wallet balance создает critical alert.
+18. Audit log нельзя удалить.
+19. Auditor видит read-only отчеты.
+20. Emergency pause требует reasonCode и multisig.
+21. Suspicious admin login создает alert.
+22. KYC threshold не редактируется в этапе 11.
+23. Cron draft можно просмотреть, но Open требует подтверждения.
+24. Manual fallback создает incident/audit record.
+
+---
+
+## 29. Открытые вопросы
+
+| Вопрос | Куда переносится |
+|---|---|
+| Финальный frontend stack админки | Старт разработки |
+| Внутренний SSO | Инфраструктура / безопасность |
+| IP allowlist | Инфраструктура |
+| Финальный формат отчетов | Backend/frontend development |
+| KYC threshold | Этап 12. Комплаенс и риски |
+| Data retention по странам | Этап 12. Комплаенс и риски |
+| Полный список операторов | Операционная модель |
+| Финальный incident response playbook | Безопасность / эксплуатация |
+
+---
+
+## 30. Критерии приемки
+
+Этап 11 считается согласованным, если:
+
+- описаны роли и права;
+- описан вход администратора;
+- описан dashboard;
+- описано управление тиражами;
+- описано управление событиями;
+- описан ручной выбор 15 событий;
+- описана будущая Cron-автоматизация;
+- описан Risk Control;
+- описан Oracle Control;
+- описан Manual Fallback;
+- описаны апелляции;
+- описан Settlement Control;
+- описан Payout Control;
+- описан Gas Monitoring;
+- описаны Monitoring & Alerts;
+- описан Users/KYC Status;
+- описаны Reports;
+- описан Audit Log;
+- описаны Settings;
+- описаны Emergency Controls;
+- описан multisig 2 из 3;
+- описана интеграция с Admin API;
+- описаны security requirements;
+- описаны тестовые сценарии.
+
+---
+
+## 31. Итоговое решение
+
+Для MVP принимается админ-панель:
+
+```text
+операционная админ-панель для ручного запуска и безопасного контроля Суперэкспресса 15
+```
+
+Ключевые решения:
+
+- на старте тиражи и 15 событий создаются вручную;
+- будущая автоматизация через Cron закладывается архитектурно;
+- критические действия требуют multisig 2 из 3;
+- все ручные действия логируются;
+- админ-панель не может незаметно изменить деньги, результаты или выплаты;
+- riskRatio контролируется до Open;
+- oracle mismatch переводится в ManualReview;
+- settlement нельзя запускать до FinalConfirmed;
+- payout amount нельзя менять после payoutRoot;
+- gas monitoring обязателен;
+- audit log обязателен и не удаляется через UI.
+
+Главный принцип:
+
+```text
+админ-панель должна ускорять операционную работу,
+но каждое действие, влияющее на деньги или результат, должно быть защищено и проверяемо.
+```

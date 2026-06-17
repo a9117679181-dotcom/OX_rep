@@ -1,0 +1,2 @@
+jurisdiction,usdc_ticket_purchase,usdc_payout,self_custody_wallets,vasp_risk,travel_rule,wallet_sanctions_screening,position,key_sources
+Nigeria,UNCLEAR,UNKNOWN,UNKNOWN,LIKELY,UNKNOWN,LIKELY,"Do not launch USDC player flow without gaming regulator + SEC/VASP + banking/payment advice. ICLG says gambling laws do not provide for virtual currencies; SEC VASP rules may apply if OX transfers/safeguards/administers virtual assets.","NGA-GAM-001; NGA-SEC-002; NGA-SEC-003; NGA-SCUML-001"
