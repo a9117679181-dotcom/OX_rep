@@ -1,0 +1,586 @@
+# OX - аудит технического задания перед финальным согласованием
+
+Дата: 17.06.2026
+Версия: v1
+Статус: честное экспертное заключение перед утверждением ТЗ
+Предмет проверки: безопасность смарт-контрактов, пользовательский опыт, открытость, честность и соответствие девизу "Честно. Прозрачно. Мгновенно."
+
+---
+
+## 1. Короткое заключение
+
+ТЗ составлено в целом правильно и стало технически зрелым после фиксации канонической архитектуры MVP.
+
+Главная сильная сторона: проект больше не выглядит как "backend сам все решает". Зафиксировано, что деньги, root, claim/refund, состояния и source of truth находятся в on-chain слое, а backend выполняет тяжелую off-chain логику.
+
+Но ТЗ нельзя считать полностью готовым к mainnet launch без условий. Для согласования его можно принять как архитектурную базу, но перед финальным запуском нужно закрыть критические зоны:
+
+- формальную проверку payoutRoot до активации;
+- точную политику KYC/compliance block;
+- incident/migration policy для non-upgradeable контрактов;
+- юридическое подтверждение стран, USDC, лицензии и global pool;
+- публичную минимальную proof/payout history как обязательный элемент доверия;
+- точную спецификацию signed quote / purchase permit.
+
+Итог:
+
+```text
+ТЗ можно утверждать как базовую архитектуру MVP.
+ТЗ нельзя утверждать как разрешение на mainnet launch до закрытия launch gates.
+```
+
+---
+
+## 2. Что сделано правильно
+
+### 2.1. Граница on-chain / off-chain
+
+Решение правильное.
+
+Контракт:
+
+- хранит деньги;
+- фиксирует параметры и состояния;
+- хранит resultRoot и payoutRoot;
+- проверяет Merkle proof;
+- выполняет claim/claimFor/refund;
+- защищает от double claim.
+
+Backend:
+
+- считает результаты и settlement;
+- строит payout manifest;
+- строит Merkle tree/proofs;
+- выдает signed quote;
+- ведет audit log.
+
+Это правильная архитектура для MVP. Смарт-контракт не должен перебирать билеты и считать победителей внутри chain.
+
+### 2.2. Модульная схема
+
+Решение правильное:
+
+```text
+DrawManager + TicketVault + TreasuryVault + ResultRegistry + PayoutVault + AccessControl/EmergencyController
+```
+
+Это лучше, чем один монолитный ExpressCore, потому что:
+
+- проще аудит;
+- понятнее storage boundaries;
+- ниже риск скрытой связи между деньгами, результатами и выплатами;
+- проще расширять B2B/B2B2C.
+
+Отдельный JackpotVault можно оставить post-MVP.
+
+### 2.3. Выплаты через Merkle + executor + fallback claim
+
+Решение правильное.
+
+Сильные стороны:
+
+- пользователь получает UX автоматической выплаты;
+- контракт не хранит огромный список победителей;
+- claim можно проверить через proof;
+- executor не имеет доступа к средствам;
+- manual claim сохраняет резервное право пользователя.
+
+Это хорошо соответствует девизу "Честно. Прозрачно. Мгновенно", если слово "мгновенно" трактуется как быстрый UX после контрольных окон, а не как отсутствие проверок.
+
+### 2.4. KYC на входе, а не после выигрыша
+
+Решение правильное и принципиально важное.
+
+В ТЗ зафиксировано:
+
+- KYC не используется как скрытый отказ от выплаты;
+- крупный выигрыш сам по себе не является причиной для KYC;
+- KYC/AML/compliance блокировка допустима только по объективному фактору.
+
+Это защищает честность продукта.
+
+### 2.5. B2B/B2B2C совместимость
+
+Последние правки правильные.
+
+Поля:
+
+- operatorId;
+- partnerId;
+- jurisdictionId;
+- licenseScope;
+- poolScope;
+- poolId.
+
+Эти поля нужно оставить уже в MVP. Это не перегружает продукт, но защищает от дорогой переделки при переходе к OX Network.
+
+---
+
+## 3. Критические зоны
+
+### 3.1. P0 - юридический контур запуска
+
+Проблема:
+
+ТЗ технически готовит продукт, но юридическая часть пока остается TBD:
+
+- страна регистрации;
+- тип лицензии;
+- разрешенные страны;
+- USDC как ставка и выплата;
+- статус global pool;
+- статус OX: supplier, co-operator, jackpot operator или remote gambling operator.
+
+Почему критично:
+
+Даже идеально безопасный контракт не спасает продукт, если выбранная юрисдикция не допускает USDC, внешний global pool или B2B2C-модель через локального оператора.
+
+Решение:
+
+Перед mainnet launch нужен отдельный legal launch gate:
+
+```text
+No legal approval by jurisdiction -> no launch in that jurisdiction.
+No USDC approval -> no USDC ticket/payout in that jurisdiction.
+No global pool approval -> use COUNTRY_POOL / OPERATOR_POOL / LICENSE_POOL or do not launch.
+```
+
+### 3.2. P0 - проверка payoutRoot перед активацией
+
+Проблема:
+
+ТЗ говорит, что RootVerifierJob сверяет суммы и manifest, а затем RootActivator/Multisig активирует root. Но пока не до конца описано, какие именно проверки являются обязательными перед активацией.
+
+Риск:
+
+Ошибочный payoutRoot может:
+
+- занизить выплаты;
+- включить неправильного recipient;
+- потерять часть winners;
+- включить неправильный poolScope/operatorId;
+- создать инцидент после первых claims, когда root уже нельзя просто заменить.
+
+Что нужно добавить:
+
+Обязательный root activation checklist:
+
+- settlementReportHash совпадает с расчетом;
+- payoutManifestHash совпадает с manifest;
+- сумма leaf <= funded PayoutVault;
+- ordinary payout + jackpot payout + refund + unclaimed + blocked = total;
+- каждый leaf уникален;
+- recipient не пустой;
+- asset = USDC;
+- drawId/resultVersion/poolScope/operatorId/jurisdictionId совпадают;
+- blocked payouts не claimable;
+- независимый verifier дал OK;
+- multisig подписывает activation только после verifier OK.
+
+30 минут technical review может быть мало для крупных тиражей. Для high-value draw нужен value-based review window.
+
+### 3.3. P0 - KYC/compliance block может стать точкой злоупотребления
+
+Проблема:
+
+ТЗ правильно запрещает KYC как отказ от выплаты. Но сама возможность BlockedKYC/BlockedCompliance опасна, если не описать сроки, причины и пользовательский процесс.
+
+Риск:
+
+Пользователь будет воспринимать блокировку как "оператор не платит", даже если технически root честный.
+
+Что нужно добавить:
+
+- закрытый список reasonCode для блокировки;
+- максимальный срок первичного review;
+- кто может поставить block;
+- кто может снять block;
+- что видит пользователь;
+- как пользователь подает документы или апелляцию;
+- что происходит, если review не закрыт до claim deadline;
+- публичная агрегированная статистика blocked payouts без PII.
+
+Минимальное правило:
+
+```text
+Blocked payout cannot silently expire.
+If payout is blocked, claim deadline must be paused or reissueRoot must preserve entitlement.
+```
+
+### 3.4. P0 - non-upgradeable MVP и аварийная миграция
+
+Проблема:
+
+Non-upgradeable MVP повышает доверие, но создает риск, если найден баг, который блокирует funds или claims.
+
+ТЗ правильно запрещает emergency withdrawal из пользовательских средств. Но нужна отдельная процедура, что делать, если средства stuck.
+
+Что нужно добавить:
+
+- migration policy для критического бага;
+- условия, при которых можно создать replacement contracts;
+- публичный incident report;
+- timelock;
+- multisig;
+- snapshot balances;
+- user claim path в новом контракте;
+- запрет на произвольный вывод средств админом.
+
+Важно:
+
+```text
+Emergency migration != admin withdrawal.
+Migration must preserve user entitlements.
+```
+
+### 3.5. P0 - signed quote / purchase permit требует точной криптографической спецификации
+
+Проблема:
+
+ТЗ говорит о signed quote/backend-signed permit, но нужна точная подпись.
+
+Что нужно добавить:
+
+- EIP-712 domain;
+- chainId;
+- verifyingContract;
+- quoteId;
+- nonce;
+- expiry;
+- operatorIdHash;
+- jurisdictionIdHash;
+- poolScope;
+- maxTicketAmount;
+- combinationsCount;
+- stakePerCombination;
+- total price;
+- asset;
+- signer role;
+- signer rotation;
+- revocation procedure;
+- replay protection.
+
+Без этого есть риск replay, cross-chain replay, подмены quote или расхождения frontend/backend/contract.
+
+---
+
+## 4. Высокие риски
+
+### 4.1. Result publisher остается trusted компонентом
+
+ТЗ честно фиксирует trusted result publisher и manual fallback через multisig. Это допустимо для MVP, но не полностью trustless.
+
+Риск:
+
+Если источники результатов спорят или manual fallback используется часто, доверие к "прозрачно" снижается.
+
+Что усилить:
+
+- публичный result manifest;
+- evidenceHash для manual result;
+- список providers и raw observation hash;
+- reasonCode для каждого manual decision;
+- ограничение manual fallback как аварийной процедуры;
+- публичная статистика manual cases.
+
+### 4.2. Public payout history должна быть не "красивая опция", а обязательный минимум
+
+В ТЗ есть публичная история выплат, но "красивые proof pages" указаны как желательно.
+
+Оценка:
+
+Красивые proof pages можно отложить. Но минимальная публичная payout history обязательна для девиза и инвесторской логики.
+
+Минимум MVP:
+
+- drawId;
+- resultRoot;
+- payoutRoot;
+- payoutManifestHash;
+- total handle;
+- ordinary payout total;
+- jackpot payout total;
+- refund total;
+- txHash выплат;
+- статус root;
+- статус jackpot;
+- incident flag, если был.
+
+Без этого "Прозрачно" будет слабым маркетинговым обещанием.
+
+### 4.3. "Мгновенно" может конфликтовать с апелляциями и проверками
+
+ТЗ правильно уточняет, что "мгновенно" не отменяет окна проверки. Но в UX нужно очень четко объяснить:
+
+- продажи закрыты;
+- результаты на проверке;
+- root опубликован;
+- идет техническое окно;
+- выплата в очереди;
+- GasPaused;
+- manual claim доступен.
+
+Если пользователь не видит этап, он будет считать задержку обманом.
+
+### 4.4. Anti-whale защита в MVP остается вероятностной
+
+ТЗ содержит сильную модель: dynamic combo price, hardComboPriceCap, soft jackpot cap, wallet limits, quote/risk layer.
+
+Но главный риск остается:
+
+- multi-wallet;
+- linked identities;
+- операторский трафик;
+- near-full coverage;
+- seed/top-up, который случайно делает атаку выгодной.
+
+Что нужно обязательно перед крупными джекпотами:
+
+- симулятор full coverage;
+- max activeJackpot по riskRatio;
+- запрет открытия draw при riskRatio >= 1;
+- мониторинг topWalletCombinationShare;
+- анализ linked wallets;
+- лимит seed/top-up без risk recalculation.
+
+### 4.5. Proof storage является критической инфраструктурой
+
+ТЗ правильно говорит, что потеря proof критична.
+
+Нужно усилить:
+
+- cold backup manifest/proofs;
+- hash-verified backup;
+- periodic restore test;
+- доступ пользователя к proof через резервный интерфейс;
+- procedure if proof API unavailable.
+
+Без proof fallback claim может стать невозможным, а это ударит по честности.
+
+### 4.6. Gas reserve и fallback claim
+
+Плюс:
+
+Gas reserve не берется из prizePool/jackpot.
+
+Риск:
+
+Если gas reserve не пополнен, UX ломается. Пользователь вынужден делать manual claim и платить gas.
+
+Что нужно:
+
+- минимальный gas reserve threshold перед активацией payouts;
+- автоматический alert до GasPaused;
+- reimbursement policy, хотя бы "не обязательна в MVP, но фиксируется причина";
+- понятный UI: "автовыплата задержана, право на выплату сохранено".
+
+---
+
+## 5. Средние риски и недочеты
+
+### 5.1. Исторические версии документов могут путать команду
+
+В папке есть старые v1/v2, где встречаются уже устаревшие формулировки, например KYC после крупного выигрыша или условная публикация root.
+
+Решение:
+
+- явно пометить старые версии как архив;
+- в финальном master document ссылаться только на актуальные версии;
+- сделать один "Source of Truth Index".
+
+### 5.2. Payout claim deadline и blocked payout
+
+Срок manual claim 365 дней разумен. Но blocked payout не должен истекать из-за длительной проверки.
+
+Решение:
+
+- claim deadline pauses for blocked payout;
+- или reissueRoot после clearance;
+- или отдельный legal hold reserve.
+
+### 5.3. B2B/B2B2C добавлен правильно, но требует отдельного продукта
+
+В ТЗ правильно добавлены operatorId/poolScope. Но полноценный B2B нельзя считать просто "партнеркой".
+
+Для версии 2 понадобится отдельный документ:
+
+```text
+OX Network Architecture & Operator Integration Specification
+```
+
+Там должны быть:
+
+- Operator Gateway;
+- operator onboarding;
+- KYB;
+- SLA;
+- reconciliation;
+- dispute process;
+- liability split;
+- operator widget/API;
+- poolScope routing;
+- country/operator/license pool rules.
+
+### 5.4. Пользовательский интерфейс должен скрывать сложность, но не скрывать правду
+
+Пользователю не нужно знать Merkle internals, но он должен видеть:
+
+- почему покупка запрещена;
+- когда закроются продажи;
+- когда будут результаты;
+- когда будет выплата;
+- почему выплата delayed/blocked;
+- как сделать manual claim;
+- где публичная история.
+
+Нельзя делать "черный ящик с красивой кнопкой".
+
+---
+
+## 6. Проверка по девизу
+
+### 6.1. "Честно"
+
+Оценка: сильная база, но есть условия.
+
+Сильные элементы:
+
+- KYC не после выигрыша;
+- payoutRoot как source of truth;
+- no admin withdrawal;
+- operator не может удержать выплату;
+- refund через Merkle.
+
+Слабые места:
+
+- BlockedKYC/BlockedCompliance нуждается в SLA и appeal path;
+- manual result решения должны быть максимально доказуемыми;
+- юридические TBD не позволяют говорить "разрешено" по странам.
+
+### 6.2. "Прозрачно"
+
+Оценка: архитектурно хорошо, продуктово нужно усилить.
+
+Сильные элементы:
+
+- resultRoot;
+- payoutRoot;
+- public payout history;
+- audit log;
+- on-chain events.
+
+Слабые места:
+
+- proof pages не должны быть только "красивой опцией";
+- нужно публичное описание root lifecycle;
+- incident reports должны быть обязательными при emergency correction.
+
+### 6.3. "Мгновенно"
+
+Оценка: допустимо только в UX-смысле.
+
+Правильная формулировка:
+
+```text
+Мгновенно = автоматическая выплата после финализации результата, root review и отсутствия блокировок.
+```
+
+Нельзя обещать мгновенную выплату без оговорок, потому что есть:
+
+- appeal window;
+- payout timelock;
+- root review;
+- KYC/compliance;
+- GasPaused;
+- emergency pause.
+
+---
+
+## 7. Что нужно добавить перед финальным утверждением
+
+### 7.1. Launch gates
+
+Добавить в финальный документ отдельный раздел:
+
+```text
+Mainnet launch запрещен, пока не закрыты:
+1. Legal approval по стране, лицензии, USDC и poolScope.
+2. External smart contract audit.
+3. Formal root activation checklist.
+4. EIP-712 signed quote specification.
+5. Incident/migration policy for non-upgradeable contracts.
+6. KYC/compliance block SLA and appeal path.
+7. Public payout history MVP.
+8. Backup/restore test for manifests and proofs.
+```
+
+### 7.2. Root activation checklist
+
+Сделать обязательным перед CLAIMING.
+
+### 7.3. Blocked payout policy
+
+Сделать отдельным разделом, чтобы не было ощущения "KYC после выигрыша".
+
+### 7.4. Public transparency MVP
+
+Сделать обязательным:
+
+- public draw page;
+- resultRoot/payoutRoot;
+- payout totals;
+- txHash;
+- jackpot history;
+- incident flag.
+
+### 7.5. Signed quote specification
+
+Описать EIP-712 полностью.
+
+### 7.6. Incident and migration policy
+
+Описать, как проект действует при:
+
+- wrong resultRoot;
+- wrong payoutRoot;
+- bug in PayoutVault;
+- stuck funds;
+- compromised executor;
+- compromised root publisher;
+- provider data failure.
+
+---
+
+## 8. Итоговое экспертное решение
+
+Мое честное заключение:
+
+```text
+ТЗ сильное и логически правильное как архитектура MVP.
+Оно соответствует девизу "Честно. Прозрачно. Мгновенно" лучше, чем большинство ранних gambling/crypto проектов, потому что выплаты, root, refund и source of truth вынесены в проверяемую модель.
+```
+
+Но:
+
+```text
+ТЗ пока нельзя считать полностью launch-ready.
+Его нужно утвердить как architecture baseline with mandatory launch gates.
+```
+
+Критически важно не делать вид, что:
+
+- global pool уже юридически разрешен;
+- licensed operator автоматически решает legal risk;
+- KYC/compliance block не может быть воспринят как отказ от выплаты;
+- 30 минут root review достаточно для всех объемов;
+- non-upgradeable контракт сам по себе безопаснее без migration policy;
+- "мгновенно" означает выплату без окон проверки.
+
+Финальная рекомендация:
+
+```text
+Утвердить текущее ТЗ как основу.
+Перед финальным master document добавить раздел "Условия финального запуска / Launch Gates".
+После этого можно собирать единый документ для согласования с разработчиками, юристами, аудиторами и инвесторами.
+```
+
