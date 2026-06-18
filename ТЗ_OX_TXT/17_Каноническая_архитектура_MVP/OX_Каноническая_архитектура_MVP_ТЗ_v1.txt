@@ -53,7 +53,7 @@ MVP может стартовать как B2C/crypto gaming product.
 | Спор | Источник истины |
 |---|---|
 | Куплен ли билет | событие и состояние TicketVault |
-| Сколько USDC принято | состояние TreasuryVault и события приема средств |
+| Сколько USDC принято | состояние TreasuryVault / OperatorVault согласно выбранному custody mode и события приема средств |
 | В каком состоянии тираж | DrawManager |
 | Какой результат финален | финальный resultRoot/resultManifestHash в ResultRegistry |
 | Какая сумма выплаты утверждена | активный payoutRoot в PayoutVault и соответствующий payout manifest |
@@ -488,6 +488,7 @@ AccessControl / EmergencyController
 | DrawManager | draw params, draw state, sales windows | жизненный цикл тиража |
 | TicketVault | tickets, selections commitment, purchase events | покупка и фиксация билетов |
 | TreasuryVault | handle, prizePool, platformFee, jackpot reserve, gas reserve | учет средств и запрет произвольного вывода |
+| OperatorVault / OperatorEscrow Adapter | operator settlement refs, escrow state, reconciliation events | B2B custody mode для operator-controlled escrow |
 | ResultRegistry | resultRoot, resultVersion, appeal state, final flag | финальность результатов |
 | PayoutVault | payoutRoot, refundRoot, claimed bitmap, claim windows | выплаты и refund через Merkle proof |
 | AccessControl / EmergencyController | roles, pause flags, reason codes | безопасность и аварийные режимы |
@@ -495,12 +496,64 @@ AccessControl / EmergencyController
 Минимальные интерфейсы:
 
 - TicketVault проверяет DrawManager перед покупкой;
-- TicketVault передает средства в TreasuryVault;
+- в Direct OX Mode TicketVault передает средства в TreasuryVault;
+- в B2B Operator-Controlled Escrow Mode TicketVault фиксирует ticket commitment, operatorId, playerHash, ticketHash и ссылку на operator settlement, а средства проходят через OperatorVault / operator-controlled escrow;
 - ResultRegistry требует LOCKED draw;
 - PayoutVault требует RESULT_FINAL;
-- PayoutVault требует funding/allowance от TreasuryVault;
+- PayoutVault требует funding/allowance от TreasuryVault или OperatorVault в зависимости от custody mode;
 - Executor работает только с PayoutVault;
 - Indexer читает события всех модулей.
+
+## 10.1. Custody modes
+
+Каноническая архитектура должна поддерживать два режима custody. Это нужно, чтобы техническая архитектура не противоречила юридической B2B supplier-модели.
+
+### Режим A: Direct OX Mode
+
+```text
+Игрок / wallet -> TicketVault -> TreasuryVault -> PayoutVault -> claim/refund
+```
+
+Суть:
+
+- OX smart contracts напрямую принимают и учитывают средства;
+- TreasuryVault ведет handle, prizePool, jackpot reserve, platform fee и gas reserve;
+- PayoutVault выплачивает по payoutRoot/refundRoot.
+
+Юридический риск:
+
+```text
+Direct OX Mode усиливает риск, что OX будет рассматриваться как operator/co-operator, custodian или payment/VASP actor.
+```
+
+Этот режим допустим только как crypto B2C / direct pilot hypothesis после отдельного legal approval.
+
+### Режим B: B2B Operator-Controlled Escrow Mode
+
+```text
+Оператор / operator wallet -> OperatorVault или operator-controlled escrow -> OX proof/root layer -> payout/reconciliation
+```
+
+Суть:
+
+- оператор является player-facing operator of record;
+- средства проходят через operator wallet, OperatorVault или operator-controlled escrow;
+- OX не имеет права произвольно выводить player funds;
+- OX фиксирует ticket commitment, operatorId, jurisdictionId, playerHash, ticketHash, poolScope, resultRoot, payoutRoot/refundRoot и audit trail;
+- оператор обязан предоставить payout reconciliation report по каждому draw.
+
+Юридическая цель:
+
+```text
+для B2B/B2B2C пилота предпочтителен OperatorVault / operator-controlled escrow, потому что он лучше поддерживает позицию OX как settlement-proof supplier, а не operator of record.
+```
+
+Техническое требование:
+
+- MVP smart-contract design не должен жестко привязывать продукт только к Direct OX Mode;
+- TreasuryVault должен быть описан как direct-custody вариант;
+- OperatorVault / OperatorEscrow adapter должен быть предусмотрен как B2B custody mode;
+- все события должны позволять indexer/backend связать ticket, operator settlement и payout obligation.
 
 Post-MVP модули:
 
@@ -620,7 +673,7 @@ Post-MVP:
 - Operator Gateway API/SDK/widget для лицензированных операторов;
 - операторский кабинет;
 - operator reconciliation automation;
-- country/operator/license-segregated pools, если юристы запретят единый global pool;
+- network jackpot architecture with operatorPool/countryPool/licensePool first; globalPool only after legal approval;
 - Мегаэкспресс 16;
 - Chainlink CRE;
 - отдельный JackpotVault;
@@ -650,7 +703,7 @@ Indexer только читает и сверяет.
 Архитектурная база MVP:
 
 ```text
-DrawManager + TicketVault + TreasuryVault + ResultRegistry + PayoutVault + AccessControl/EmergencyController
+DrawManager + TicketVault + TreasuryVault / OperatorVault + ResultRegistry + PayoutVault + AccessControl/EmergencyController
 ```
 
 Главные запреты:

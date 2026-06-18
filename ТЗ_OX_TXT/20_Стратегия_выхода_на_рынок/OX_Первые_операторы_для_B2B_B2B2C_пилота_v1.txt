@@ -1,0 +1,521 @@
+# OX - первые операторы для B2B/B2B2C пилота
+
+Дата: 19.06.2026
+Статус: приложение к документу "OX - стратегия локализации и выхода на рынок".
+
+## 1. Назначение документа
+
+Этот документ фиксирует не список конкурентов, а рабочую карту первых операторов, к которым OX может выходить для пилотного B2B/B2B2C подключения.
+
+Главный вопрос документа:
+
+```text
+Кому OX может предложить первый football jackpot/toto pilot так, чтобы оператору было понятно, зачем подключать внешний продукт, а OX не тратил время на слишком крупных или неподходящих партнеров.
+```
+
+Документ не заменяет стратегию локализации. Он является операционным приложением к ней.
+
+## 2. Связь со стратегией локализации
+
+Стратегия локализации отвечает на вопрос:
+
+```text
+В какие рынки и по какой модели OX должен выходить.
+```
+
+Этот документ отвечает на вопрос:
+
+```text
+К каким первым операторам идти для pilot / outreach / discovery calls.
+```
+
+Поэтому документы нужно держать связанными, но не сливать полностью. Основной стратегический документ должен оставаться коротким и управленческим, а этот файл должен обновляться как рабочий shortlist.
+
+## 3. Базовое решение
+
+Для первого коммерческого этапа OX не должен начинать с крупнейших фиатных локальных букмекеров и не должен начинать с прямых конкурентов, у которых уже есть похожий toto/jackpot-продукт.
+
+Рекомендуемый первый сегмент:
+
+```text
+mid-tier crypto-native sportsbook / casino-sportsbook operators,
+которые уже принимают crypto, понимают offshore iGaming и могут протестировать внешний jackpot/toto-модуль быстрее, чем крупные regulated fiat operators.
+```
+
+Причина:
+
+- пользователю не нужно объяснять crypto/wallet/USDC с нуля;
+- оператору понятна crypto-gambling экономика;
+- технический барьер ниже;
+- legal/payment контур проще, чем у локального фиатного букмекера;
+- OX может быстрее получить первый публичный proof case.
+
+## 4. Что не считать автоматическим преимуществом
+
+Crypto-ready оператор не означает автоматически:
+
+- что он юридически подходит для OX;
+- что он имеет хорошую репутацию;
+- что он захочет внешний jackpot-продукт;
+- что его лицензия покрывает B2B/B2B2C модель OX;
+- что он согласится на on-chain transparency;
+- что его аудитория станет аудиторией OX.
+
+Каждый оператор требует due diligence до реального коммерческого контакта.
+
+## 5. Критерии отбора первых операторов
+
+| Критерий | Что проверяем | Почему важно для OX |
+|---|---|---|
+| Crypto-readiness | BTC/ETH/USDT/USDC, crypto deposits/withdrawals | Снижает барьер входа |
+| Sportsbook focus | Есть ли реальный sportsbook, а не только casino | OX - sport jackpot, не casino game |
+| Football relevance | Есть ли футбольная аудитория | OX-15 завязан на football/toto |
+| Jackpot gap | Есть ли у оператора свой сильный jackpot/toto | Если есть, OX менее нужен |
+| Лицензия | Curaçao, Anjouan, Costa Rica, другое | Влияет на репутацию и legal risk |
+| Масштаб | Web visits, бренд, география | Даёт оценку потенциального охвата |
+| Гибкость | Может ли оператор быстро тестировать внешний продукт | Важно для пилота |
+| Репутация | Жалобы на выплаты, лицензии, KYC, withdrawal issues | Важно для инвестора и доверия |
+| Интеграция | Widget/API/referral/hosted model | Определяет скорость пилота |
+
+## 6. Рекомендуемая модель первого пилота
+
+Не начинать с полной B2B-интеграции.
+
+Рекомендуемая модель:
+
+```text
+Operator referral / partner campaign + OX hosted jackpot или OX widget.
+```
+
+Схема:
+
+```text
+оператор показывает OX jackpot как partner campaign
+-> пользователь переходит в OX hosted flow или открывает OX widget
+-> покупка идет в USDC
+-> OX фиксирует ticket / pool / resultRoot / payoutRoot
+-> OX публикует payout proof и public payout history
+-> оператор получает RevShare / CPA / partner fee
+```
+
+Плюсы:
+
+- быстрее запустить;
+- меньше интеграции;
+- меньше риск для оператора;
+- OX сохраняет контроль над прозрачностью settlement;
+- можно проверить спрос до сложного Operator Gateway.
+
+Минусы:
+
+- оператор может не хотеть уводить пользователя из своего интерфейса;
+- нужно заранее определить owner of record;
+- нужен договор о player ownership, KYC/compliance, географии и выплатах;
+- юридически всё равно надо определить, кто является operator of record.
+
+После proof case можно переходить к модели:
+
+```text
+Operator Gateway:
+operatorId + jurisdictionId + playerHash + ticketHash + payout proof + reconciliation.
+```
+
+## 7. Wave 1 - основные outreach-кандидаты
+
+### 7.1. Cloudbet
+
+Статус: основной кандидат.
+
+Почему интересен:
+
+- crypto sportsbook DNA;
+- бренд исторически связан со sports betting;
+- не такой гигант, как Stake;
+- пользователи уже понимают crypto;
+- официальный сайт указывает Curaçao Gaming Authority license OGL/2024/328/0599 для Halcyon Super Holdings B.V.
+
+Риск:
+
+- у оператора уже сильный sportsbook;
+- может потребовать proof case, supplier pack или white-label контроль;
+- может не захотеть внешний продукт без доказанной экономики.
+
+Как заходить:
+
+```text
+Мы не конкурируем с вашим sportsbook. Мы предлагаем отдельный football jackpot/toto module: 15 matches, jackpot, on-chain payout proof, API/widget integration, revenue share.
+```
+
+Приоритет: Very High.
+
+### 7.2. Sportsbet.io
+
+Статус: основной кандидат.
+
+Почему интересен:
+
+- sports-first crypto brand;
+- пользователям понятны crypto payments;
+- официальный terms/help указывает mBet Solutions N.V., Curaçao, license OGL/2023/110/0072;
+- совместим с идеей football jackpot campaign.
+
+Риск:
+
+- может быть сложный group-level decision-making;
+- может не захотеть внешний jackpot;
+- может потребовать сильный pilot pack и юридическое подтверждение роли OX.
+
+Приоритет: Very High.
+
+### 7.3. Thunderpick
+
+Статус: основной кандидат, но с фокусом на football campaign.
+
+Почему интересен:
+
+- crypto/esports/sports betting brand;
+- официальный сайт и CGA certificate указывают Paloma Media B.V. и license OGL/2024/677/0722;
+- может быть гибче, чем крупные бренды;
+- потенциально хорош под World Cup 2026 / global football jackpot angle.
+
+Риск:
+
+- аудитория может быть больше esports/casino, чем football-toto;
+- нужно проверить реальный интерес к football jackpot;
+- продуктовый pitch должен быть не "тото вообще", а campaign вокруг крупного футбольного события.
+
+Приоритет: High.
+
+### 7.4. BetFury
+
+Статус: основной кандидат, но с проверкой sports activity.
+
+Почему интересен:
+
+- crypto-native;
+- заметный трафик;
+- может быть более открытым к партнерствам, чем гиганты;
+- публичные страницы указывают Curaçao license/application OGL/2024/1494/0942.
+
+Риск:
+
+- casino-first perception;
+- нужно проверить, насколько живой и значимый sportsbook-сегмент;
+- OX может быть не приоритетом, если основная экономика идёт от casino.
+
+Приоритет: High.
+
+## 8. Wave 1 Watchlist - можно проверять, но не ставить в основной топ без due diligence
+
+### 8.1. Bets.io
+
+Статус: watchlist.
+
+Почему интересен:
+
+- crypto/casino/sportsbook positioning;
+- потенциально более гибкий mid-tier оператор;
+- может быть доступнее для маленького пилота.
+
+Почему не основной кандидат сейчас:
+
+- в исходном анализе он описывался как Anjouan-кандидат, но официальные Terms указывают Techno Wave Systems S.R.L., Costa Rica;
+- нужно отдельно подтвердить лицензию, sports traffic, репутацию и платежную структуру;
+- для инвестора такой кандидат слабее, чем Curaçao LOK оператор с понятным license number.
+
+Приоритет: Medium after verification.
+
+### 8.2. Dexsport
+
+Статус: experimental Web3 outreach.
+
+Почему интересен:
+
+- Web3 / crypto audience;
+- sportsbook + casino;
+- может быть открыт к экспериментам.
+
+Почему осторожно:
+
+- Anjouan/no-KYC позиционирование нельзя переносить в OX как ценность;
+- нужно подтвердить лицензию, команду, объем, выплаты и географии;
+- может быть слишком нишевым для первого сильного proof case.
+
+Приоритет: Medium, только после проверки.
+
+## 9. Wave 2 - после первого proof case
+
+### 9.1. Rollbit
+
+Интересен как крупный crypto-gambling brand, но не как первый партнер.
+
+Причины не идти первым:
+
+- крупный бренд может построить аналог сам;
+- нужен доказанный кейс;
+- есть риск копирования идеи;
+- high-risk/casino/trading perception может быть сложной для инвесторского позиционирования.
+
+Приоритет: Later-stage.
+
+### 9.2. Bitcasino.io
+
+Интересен как crypto brand и возможный group-level контакт, но не лучший sportsbook-first вход.
+
+Причина:
+
+- casino-first;
+- если идти в эту группу, логичнее заходить через Sportsbet.io как спортивный угол.
+
+Приоритет: Later-stage / group-level.
+
+### 9.3. BC.Game
+
+Интересен масштабом, но не подходит для первого пилота.
+
+Причины:
+
+- сложная история с Curaçao license withdrawal / regulatory conflict;
+- высокий репутационный риск;
+- casino-first;
+- нужен отдельный legal/reputation due diligence.
+
+Приоритет: Low для первого пилота, Medium later-stage.
+
+### 9.4. Stake
+
+Стратегически интересен, но не стартовая цель.
+
+Причины:
+
+- слишком крупный;
+- сложно достучаться без proof case;
+- может построить аналог самостоятельно;
+- может потребовать audit, legal pack, security pack, supplier pack и доказанную traction.
+
+Приоритет: Low сейчас, High после сильного proof case.
+
+## 10. Benchmark / не идти первыми
+
+### 10.1. 1xBet
+
+Статус: benchmark / конкурент.
+
+Причина:
+
+- уже есть Toto-15 / похожая механика;
+- большой риск копирования;
+- сложно доказать им ценность внешнего OX на раннем этапе.
+
+Решение: не идти первым.
+
+### 10.2. 1xBit
+
+Статус: crypto benchmark / конкурент.
+
+Причина:
+
+- уже есть Toto Fifteen;
+- crypto-аудитория;
+- слишком близкая механика.
+
+Решение: не идти первым.
+
+### 10.3. SportPesa
+
+Статус: benchmark.
+
+Причина:
+
+- сильное jackpot DNA;
+- уже есть Jackpot / Mega Jackpot Pro;
+- SportPesa полезен как UX-ориентир, но маловероятен как первый клиент.
+
+Решение: не идти первым.
+
+### 10.4. Bet9ja / SportyBet / BetKing / Betway Africa
+
+Статус: future local operators.
+
+Причина:
+
+- огромная локальная аудитория;
+- сильная sports betting culture;
+- но сложный fiat/KYC/tax/local license контур;
+- нужен countryPool/operatorPool, а не общий global pool без legal approval;
+- нужно сначала показать proof case на crypto-ready пилоте.
+
+Решение: готовить как Tier 3 после первого подтвержденного кейса.
+
+## 11. Pitch для первого оператора
+
+Не говорить:
+
+```text
+Мы делаем блокчейн-тотализатор.
+```
+
+Говорить:
+
+```text
+Мы даем вам готовый football jackpot/toto product без необходимости строить собственную settlement-архитектуру.
+
+Вы получаете новый retention-продукт для crypto-аудитории, а OX обеспечивает ticket commitment, resultRoot, payoutRoot, on-chain settlement proof, public payout history и operator reconciliation.
+```
+
+Ключевые аргументы:
+
+- новый продукт без разработки с нуля;
+- retention через крупный jackpot;
+- World Cup / major football campaign;
+- публичное доказательство выплат;
+- revenue share / low integration pilot;
+- быстрый тест спроса;
+- потенциальное будущее подключение к network pool.
+
+## 12. Что нельзя раскрывать на первом контакте
+
+На первом звонке нельзя продавать "идею 15 матчей". Это легко скопировать.
+
+Продавать нужно не идею, а готовность к запуску:
+
+- audited/pilot-ready core;
+- on-chain proof;
+- anti-whale model;
+- payoutRoot/refundRoot;
+- public payout history;
+- operator reconciliation;
+- compliance-aware architecture;
+- speed to launch.
+
+Moat OX:
+
+```text
+не 15 событий,
+а trust infrastructure for jackpot settlement.
+```
+
+## 13. Due diligence перед outreach
+
+Перед реальным контактом по каждому оператору нужно собрать:
+
+- legal entity;
+- license number;
+- license status;
+- regulator/certificate link;
+- restricted jurisdictions;
+- accepted crypto assets;
+- sportsbook depth;
+- football traffic / football campaign activity;
+- наличие собственного jackpot/toto;
+- withdrawal reputation;
+- KYC/AML policy;
+- B2B/affiliate/partnership contacts;
+- API/widget feasibility;
+- потенциальный conflict of interest;
+- риск копирования.
+
+Нельзя выходить к оператору только на основании обзоров или traffic estimates.
+
+## 14. Потенциальная аудитория OX через первых операторов
+
+Если подключить 3-5 правильных crypto-native операторов, потенциальный верхний доступ к аудитории может измеряться миллионами пользователей.
+
+Но это не означает миллионы пользователей OX.
+
+Реалистичная оценка активных пользователей OX в первые 12-18 месяцев после запуска через операторов:
+
+| Сценарий | Активные пользователи OX |
+|---|---:|
+| Осторожный | 5 000 - 20 000 |
+| Базовый | 20 000 - 75 000 |
+| Сильный | 75 000 - 150 000 |
+| Очень сильный | 200 000+ |
+
+Рабочая цель:
+
+```text
+30 000 - 100 000 активных пользователей OX за 12-18 месяцев при подключении 3-5 операторов и реальном промо с их стороны.
+```
+
+Ключевой вопрос:
+
+```text
+не сколько у оператора пользователей,
+а сколько внимания оператор реально отдаст OX.
+```
+
+## 15. Рейтинг для первого действия
+
+| Приоритет | Оператор | Решение |
+|---:|---|---|
+| 1 | Cloudbet | Основной outreach |
+| 2 | Sportsbet.io | Основной outreach |
+| 3 | Thunderpick | Основной outreach |
+| 4 | BetFury | Основной outreach |
+| 5 | Bets.io | Watchlist после license/reputation verification |
+| 6 | Dexsport | Experimental Web3 outreach |
+| 7 | Rollbit | Later-stage после proof case |
+| 8 | Bitcasino.io | Later-stage / group-level |
+| 9 | BC.Game | Осторожно, только после legal/reputation review |
+| 10 | Stake | Стратегическая цель после proof case |
+| No-go first | 1xBet / 1xBit | Benchmark / конкурент |
+| No-go first | SportPesa | Benchmark |
+| Future local | Bet9ja / SportyBet / BetKing / Betway Africa | После country/operator proof case |
+
+## 16. Итоговое заключение
+
+Первый коммерческий фокус OX:
+
+```text
+mid-tier crypto-native sportsbook operators,
+которым нужен новый football jackpot/toto-продукт,
+и которые готовы протестировать его через partner campaign / widget / hosted jackpot.
+```
+
+Лучший первый shortlist:
+
+1. Cloudbet.
+2. Sportsbet.io.
+3. Thunderpick.
+4. BetFury.
+
+Дополнительные кандидаты после проверки:
+
+1. Bets.io.
+2. Dexsport.
+
+Не идти первыми:
+
+1. 1xBet.
+2. 1xBit.
+3. SportPesa.
+4. Stake.
+5. BC.Game.
+6. Крупные фиатные локальные операторы.
+
+Финальное решение:
+
+```text
+OX должен сначала получить один честный proof case:
+оператор -> тираж -> on-chain proof -> выплата -> reconciliation -> public payout history.
+
+После этого можно идти к более крупным операторам и локальным лицензированным рынкам.
+```
+
+## 17. Источники и проверочные точки
+
+- Cloudbet license / terms: https://www.cloudbet.com/en/about-us/license
+- Cloudbet terms: https://www.cloudbet.com/en/help/terms
+- Sportsbet.io terms: https://sportsbet.io/help-centre/help-other/help-other-terms-and-conditions/general-terms-conditions
+- Sportsbet.io AML: https://sportsbet.io/about/aml
+- Thunderpick about: https://thunderpick.io/content/about
+- Thunderpick CGA certificate: Curaçao Gaming Authority certificate OGL/2024/677/0722
+- BetFury terms: https://docs.betfury.com/betfury/terms-of-services/terms-and-conditions
+- BetFury site/license notice: https://betfury.com/
+- Bets.io terms: https://www.bets.io/terms-and-conditions
+- BC.Game Curaçao withdrawal reports: iGamingBusiness, World Casino Directory, NEXT.io
+- Overtime docs: https://docs.overtime.io/
+- SX Bet docs: https://docs.sx.bet/user-guides/getting-started/overview
+- Azuro docs/site: https://azuro.org/ and https://gem.azuro.org/
+

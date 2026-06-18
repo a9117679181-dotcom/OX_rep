@@ -1,0 +1,407 @@
+# OX - анализ юридико-стратегического документа
+
+Дата: 19.06.2026
+Статус: внутренний анализ. Не является юридическим заключением.
+
+## 1. Короткое заключение
+
+Загруженный документ в целом совпадает с уже проработанной логикой OX.
+
+Критических противоречий с текущим ТЗ не обнаружено.
+
+Документ правильно усиливает уже выбранную стратегию:
+
+```text
+OX не стартует как прямой нелицензированный B2C-букмекер.
+OX пытается закрепиться как B2B/B2B2C technology / settlement-proof supplier для оператора, который является operator of record.
+```
+
+Но документ нельзя фиксировать "как есть" без уточнений. В нём нужно жёстче прописать:
+
+- лицензия партнёра не покрывает OX автоматически;
+- offshore crypto-оператор не решает legal risk сам по себе;
+- globalPool не разрешён по умолчанию;
+- USDC settlement может создавать VASP/payment/custody риск;
+- OX может стать co-operator, если фактически управляет draw, pool, payoutRoot и jackpot reserve;
+- UAE entity нельзя использовать для gaming/facilitation без отдельного анализа GCGRA;
+- no-KYC/no-PII формулировки нужно заменить на compliance-aware модель.
+
+## 2. Что принимаем полностью
+
+### 2.1. B2B/B2B2C supplier framing
+
+Принимаем.
+
+Формулировка, что OX должен стартовать не как "нелицензированный оператор", а как B2B technology / settlement-proof supplier, полностью совпадает с нашей канонической стратегией.
+
+Обоснование:
+
+- уже зафиксированы `operatorId`, `jurisdictionId`, `poolScope`, `playerHash`, `ticketHash`;
+- оператор должен отвечать за игрока, KYC, пользовательские Terms, локальные платежи, налоги и поддержку;
+- OX отвечает за ticket commitment, resultRoot, payoutRoot, Merkle proof, audit log и reconciliation.
+
+### 2.2. Operator of record должен быть у партнёра
+
+Принимаем.
+
+Это снижает риск прямого B2C-лицензирования для OX, но не снимает риск B2B supplier/co-operator статуса.
+
+Правильная формулировка:
+
+```text
+Партнёр является player-facing operator of record.
+OX не заменяет лицензию, KYC, responsible gaming, geo/access control и payout obligations оператора.
+```
+
+### 2.3. Первый пилот через crypto-ready / mid-tier операторов
+
+Принимаем.
+
+Это совпадает с документом по первым операторам для B2B/B2B2C пилота.
+
+Обоснование:
+
+- crypto-аудитория уже понимает wallet/stablecoin поведение;
+- технический барьер ниже, чем у фиатного локального оператора;
+- можно быстрее проверить draw -> resultRoot -> payoutRoot -> payout -> reconciliation -> public payout history;
+- крупные фиатные операторы лучше оставить после proof case.
+
+### 2.4. Список вопросов юристу
+
+Принимаем.
+
+Список вопросов сильный и практически полезный. Особенно важны блоки:
+
+- роль OX: supplier / B2B supplier / co-operator / direct operator;
+- лицензии и юрисдикции;
+- operator agreement;
+- USDC/VASP/payment;
+- pool structure;
+- KYC/AML;
+- data/privacy;
+- smart contract custody;
+- restricted countries.
+
+### 2.5. Практический план 30 дней
+
+Принимаем частично, с уточнением.
+
+Сама логика правильная:
+
+1. собрать legal brief;
+2. провести 2-3 консультации;
+3. собрать operator pipeline;
+4. провести discovery calls;
+5. выбрать legal structure и pilot model.
+
+Уточнение:
+
+```text
+Discovery calls с операторами нельзя вести как sales launch, пока не готов минимальный legal boundary memo.
+Сначала допустимы только exploratory / research calls.
+```
+
+## 3. Что принимаем, но корректируем
+
+### 3.1. "Licensed or offshore crypto-operator"
+
+Принимаем направление, но корректируем формулировку.
+
+Проблема:
+
+```text
+offshore crypto-operator
+```
+
+может звучать так, будто любой offshore-оператор юридически подходит.
+
+Корректная формулировка:
+
+```text
+licensed / licence-verified / legally reviewed crypto-ready operator,
+который письменно подтверждает право предлагать jackpot/toto/pool betting, принимать игроков из заявленных стран и использовать внешний B2B/supplier продукт.
+```
+
+### 3.2. Supplier-only модель
+
+Принимаем как цель, но нельзя считать её доказанной.
+
+Проблема:
+
+OX управляет критичными элементами:
+
+- draw lifecycle;
+- resultRoot;
+- payoutRoot;
+- jackpot logic;
+- smart contracts;
+- treasury/jackpot reserve;
+- public payout history.
+
+Это может сделать OX не просто software supplier, а B2B gaming supplier или co-operator.
+
+Корректная позиция:
+
+```text
+Supplier-only является целевой моделью, но требует legal memo.
+Если юрист подтверждает co-operator риск, нужно заранее считать требования собственной B2B/supplier/gaming/VASP лицензии.
+```
+
+### 3.3. Crypto-pilot
+
+Принимаем, но не как обход локального регулирования.
+
+Проблема:
+
+Crypto rails не отменяют:
+
+- gambling law;
+- AML/CFT;
+- sanctions screening;
+- restricted markets;
+- advertising restrictions;
+- responsible gaming;
+- tax;
+- consumer protection.
+
+Корректная позиция:
+
+```text
+Crypto-pilot может быть проще технически и операционно, но юридически должен проходить через operator-of-record, restricted countries policy и USDC/VASP/payment review.
+```
+
+### 3.4. Anjouan
+
+Принимаем как возможный быстрый пилотный контур, но с понижением статуса.
+
+По официальному сайту Anjouan Gaming, режим включает B2C и B2B internet gaming licensing, compliance и public register.
+
+Но для OX:
+
+- Anjouan слабее для инвесторского доверия;
+- может быть токсичнее для крупных операторов;
+- не должен стать долгосрочным "лицом" regulated strategy;
+- требует проверки конкретной лицензии и operator domains.
+
+Итог:
+
+```text
+Anjouan допустим к обсуждению как быстрый пилотный вариант, но не как preferred long-term jurisdiction.
+```
+
+### 3.5. Curaçao
+
+Принимаем как более сильный offshore-контур, но с уточнением.
+
+По CGA portal:
+
+- online gaming operators apply for online gaming license;
+- suppliers of gambling-related critical services/goods may require supplier license;
+- LOK framework прямо выделяет supplier license;
+- entities controlling player databases/transactions могут попадать в licensing analysis.
+
+Итог:
+
+```text
+Curaçao выглядит сильнее Anjouan для инвесторов и операторов, но OX должен отдельно проверить, нужна ли ему supplier license, особенно если OX предоставляет sportsbook/jackpot software, controls settlement или critical gambling infrastructure.
+```
+
+### 3.6. UAE
+
+Принимаем только как holding/tech hypothesis после отдельного анализа.
+
+По GCGRA:
+
+```text
+engaging in, conducting or facilitating commercial gaming in the UAE without GCGRA license is illegal.
+```
+
+Поэтому UAE нельзя использовать как gambling operating base без юридического заключения.
+
+Корректная позиция:
+
+```text
+UAE может рассматриваться только как holding/tech/IP/management контур после отдельного UAE legal memo. Любая gaming facilitation из UAE без GCGRA analysis запрещена как рабочее допущение.
+```
+
+## 4. Что не принимаем / что нельзя оставлять
+
+### 4.1. Нельзя писать "OX без лицензии работает через партнёров"
+
+Отклоняем.
+
+Это звучит как обход регулирования.
+
+Заменить на:
+
+```text
+OX проверяет модель supplier / B2B technology provider / settlement-proof infrastructure under partner operator-of-record.
+```
+
+### 4.2. Нельзя писать "глобальный пул сразу"
+
+Отклоняем.
+
+GlobalPool - самый чувствительный legal risk.
+
+Заменить на:
+
+```text
+MVP: operatorPool / countryPool / licensePool.
+GlobalPool допустим только после legal approval по конкретным странам, лицензиям, операторам, tax и payment rails.
+```
+
+### 4.3. Нельзя писать "нам не нужен KYC"
+
+Отклоняем.
+
+Заменить на:
+
+```text
+KYC/AML выполняется оператором или OX/партнёром в зависимости от модели, юрисдикции, суммы, risk threshold и legal triggers. OX получает KYC-status flags без PII, если это допустимо.
+```
+
+### 4.4. Нельзя обещать "мгновенные выплаты" без review/timelock
+
+Отклоняем.
+
+Заменить на:
+
+```text
+выплата после финализации resultRoot/payoutRoot, review/timelock и обязательных compliance checks.
+```
+
+### 4.5. Нельзя оставлять revenue share от handle без legal analysis
+
+Отклоняем как автоматическое допущение.
+
+Причина:
+
+Процент от handle / GGR может усилить аргумент, что OX участвует в gambling operation, а не просто продаёт software.
+
+Нужен вопрос юристу:
+
+```text
+Какая fee model меньше всего повышает co-operator risk: fixed SaaS fee, setup fee, revenue share, per-ticket tech fee, performance fee?
+```
+
+## 5. Проверка на противоречия с текущим ТЗ OX
+
+### 5.1. On-chain / off-chain граница
+
+Противоречий нет.
+
+Документ подтверждает:
+
+- on-chain: custody/roots/claims/proofs;
+- off-chain: KYC, legal, sports data, disputes, operator support, reconciliation.
+
+Уточнение:
+
+Если OX controls treasury and payoutRoot, это усиливает legal role analysis.
+
+### 5.2. B2B/B2B2C стратегия
+
+Противоречий нет.
+
+Документ подтверждает выбранную модель:
+
+- сначала crypto-ready pilots;
+- затем локальные licensed operators;
+- затем более крупные brands после proof case.
+
+### 5.3. KYC on risk entry
+
+Противоречий нет, но требуется формализация.
+
+Документ правильно говорит, что KYC нельзя отрицать. Нужно сохранить наш принцип:
+
+```text
+KYC не должен становиться скрытым отказом от выплаты.
+KYC/compliance checks должны быть до risk entry или по объективным legal/AML triggers.
+```
+
+### 5.4. Public payout history
+
+Противоречий нет.
+
+Это ключевое преимущество OX.
+
+Уточнение:
+
+Публичная история выплат не должна раскрывать PII и должна быть согласована с data/privacy memo.
+
+### 5.5. PoolScope
+
+Противоречий нет, но документ требует усиления.
+
+Нужно закрепить:
+
+```text
+operatorPool/countryPool/licensePool - стартовая модель.
+globalPool - post-legal-approval.
+```
+
+## 6. Итоговое решение
+
+Документ полезен и должен быть зафиксирован в проекте, но в исправленной версии.
+
+Принимаем:
+
+- supplier / B2B technology / settlement-proof framing;
+- operator-of-record у партнёра;
+- crypto-ready operator pilot;
+- список вопросов юристу;
+- 30-дневный legal/action plan;
+- необходимость legal role memo, pool scope matrix, USDC/VASP memo и operator agreement.
+
+Корректируем:
+
+- "offshore operator" -> "licence-verified / legally reviewed operator";
+- "supplier-only" -> "target model requiring legal confirmation";
+- "crypto-pilot проще" -> "проще операционно, но не legal-free";
+- Anjouan -> "fast pilot only, weaker reputation";
+- Curaçao -> "preferred offshore candidate, but supplier license analysis required";
+- UAE -> "holding/tech only after GCGRA memo".
+
+Отклоняем:
+
+- "без лицензии через партнёров";
+- "globalPool сразу";
+- "KYC не нужен";
+- "USDC не создаёт payment/VASP risk";
+- "мгновенные выплаты без review";
+- "revenue share безопасен без анализа".
+
+## 7. Финальная рекомендация
+
+Создать отдельный финальный документ:
+
+```text
+OX_Юридико_стратегическая_модель_и_вопросы_юристу_финал_v1.txt
+```
+
+Назначение:
+
+- дать юристу компактный и честный бриф;
+- не подменять юридическое заключение;
+- зафиксировать красные зоны до пилота;
+- связать юридическую модель с текущим ТЗ OX.
+
+Главный вопрос юристу:
+
+```text
+Может ли OX в выбранной модели быть supplier / B2B technology provider / settlement-proof infrastructure для operator-of-record, не становясь gambling operator или co-operator? Если нет, какая лицензия, структура и ограничения нужны?
+```
+
+## 8. Источники проверки
+
+- Curaçao Gaming Authority / CGA portal: https://portal.cga.cw/
+- Curaçao Gaming Authority: https://www.cga.cw/
+- Anjouan Gaming: https://anjouangaming.com/
+- Anjouan Gaming Licensing: https://anjouangaming.com/licensing/
+- Anjouan Licence Types: https://anjouangaming.com/licensing/licence-types/
+- UAE GCGRA: https://www.gcgra.gov.ae/en/
+- UAE GCGRA Licensing: https://www.gcgra.gov.ae/en/licensing/
+- Внутренние документы OX: стратегия B2B/B2B2C, стратегия выхода на рынок, каноническая архитектура MVP, документ по первым операторам.
+

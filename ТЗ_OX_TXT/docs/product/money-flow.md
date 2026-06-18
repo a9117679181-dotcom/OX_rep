@@ -7,14 +7,14 @@
 - **ASSUMPTION:** OX не принимает игроков напрямую в регулируемых странах.
 - **ASSUMPTION:** OX работает как B2B/B2B2C-инфраструктура через локально лицензированных операторов.
 - **ASSUMPTION:** локальный оператор дает игроков, локальную лицензионную рамку, локальный маркетинг и отношения с пользователем.
-- **ASSUMPTION:** OX дает технологию, общий пул, смарт-контракт, выбор событий, расчет выплат, аудит и операционное сопровождение.
+- **ASSUMPTION:** OX дает технологию, network jackpot architecture, смарт-контракт/proof-layer, выбор событий, расчет выплат, аудит и операционное сопровождение.
 - Главный юридический вопрос: является ли OX просто B2B supplier/software provider или фактическим gambling co-operator.
-- Главный риск: единый трансграничный global pool.
-- Главный исследовательский вопрос: можно ли делать один глобальный пул или нужны country/operator/license-segregated sub-pools.
+- Главный риск: единый трансграничный globalPool до legal approval.
+- Главный исследовательский вопрос: какие poolScope и custody modes допустимы: Direct OX Mode, Operator-Controlled Escrow Mode, operatorPool, countryPool, licensePool или globalPool.
 
 ## Базовая модель средств
 
-**ASSUMPTION:** стартовая расчетная валюта MVP - USDC. Стратегический документ описывает билет `Суперэкспресс 15` как 3 USDC. Это не финальное юридическое или финансовое значение.
+**ASSUMPTION:** стартовая расчетная валюта MVP - USDC. Согласованная базовая цена одной линии `Суперэкспресс 15` для MVP - 1 USDC. Цена должна оставаться параметром тиража (`comboPrice`): при росте jackpot и anti-whale риска она может быть повышена до открытия продаж по заранее описанным правилам, но не меняется после статуса Open.
 
 **ASSUMPTION:** базовая экономика одного тиража:
 
@@ -56,7 +56,7 @@
 ## Ключевые юридические вопросы money flow
 
 1. Кто legally accepts stake/ticket purchase: оператор, OX, смарт-контракт, платежный провайдер или network entity?
-2. Кто владеет или контролирует funds в global pool?
+2. Кто владеет или контролирует funds в выбранном poolScope и custody mode?
 3. Является ли smart contract custody, escrow, player account, gambling wallet или technical settlement tool?
 4. Можно ли принимать и выплачивать USDC в конкретной юрисдикции?
 5. Должны ли средства игроков храниться отдельно по стране, оператору или лицензии?
@@ -66,4 +66,4 @@
 
 ## Предварительная risk note
 
-**ASSUMPTION:** единый трансграничный global pool улучшает ликвидность и размер джекпота, но может быть главным основанием для вывода о cross-border gambling operation. До юридического подтверждения по странам money flow должен проектироваться так, чтобы его можно было разделить на country/operator/license-segregated sub-pools.
+**ASSUMPTION:** единый трансграничный globalPool улучшает ликвидность и размер джекпота, но может быть главным основанием для вывода о cross-border gambling operation. До юридического подтверждения по странам money flow должен проектироваться как network jackpot architecture with operatorPool/countryPool/licensePool first; globalPool only after legal approval. Для B2B-пилота предпочтителен Operator-Controlled Escrow Mode, а Direct OX Mode является отдельным direct crypto risk mode.

@@ -1,0 +1,382 @@
+# OX: анализ конкурентов и идеи для модернизации
+
+Дата: 19.06.2026
+Статус: рабочий аналитический документ, не является юридическим заключением.
+
+## 1. Краткий вывод
+
+OX не должен позиционироваться как "уникальная механика 15 событий". Такая механика уже есть у рынка: 1xBet/1xBit Toto-15, XBet/Пятнашка, SportPesa jackpot, испанская La Quiniela и похожие football pools.
+
+Сильная позиция OX должна быть другой: прозрачный тотализатор с публичной историей тиражей, on-chain фиксацией денег и обязательств, Merkle-claim выплатами, проверяемым payout/refund root, B2B/B2B2C моделью через лицензированных локальных операторов.
+
+Главное, что нужно взять у конкурентов: простоту входа, понятные категории выигрыша, системные ставки, редуцированные купоны, публичную историю результатов и привычный для массового игрока UX.
+
+Главное, что нельзя копировать: непрозрачное право оператора менять/отменять ставки, discretionary settlement, обещания "анонимно без KYC", короткое окно лишения выигрыша, неясные правила при отменённых матчах и маркетинговые заявления без доказуемой выплаты.
+
+## 2. Классы конкурентов
+
+| Класс | Примеры | Насколько похожи на OX | Что важно |
+|---|---|---:|---|
+| Классические toto/jackpot | SportPesa, 1xBet Toto-15, XBet/Пятнашка, La Quiniela | Высокая похожесть по механике | Это прямой UX-ориентир |
+| Бесплатные промо-продукты | Bet9ja Super9ja | Средняя/низкая похожесть | Полезно только как маркетинговая воронка |
+| Crypto sportsbook | 1xBit, Sportsbet.io-подобные продукты | Средняя похожесть по платежам, ниже по тотализатору | Полезно для crypto onboarding, но опасно по compliance |
+| On-chain protocols | Overtime, SX Bet, Azuro, Polymarket | Низкая по механике, высокая по прозрачности | Полезно для on-chain принципов и settlement proof |
+
+## 3. Сравнение по продуктам
+
+### 3.1 SportPesa Mega Jackpot / Jackpot
+
+Похожесть с OX: высокая.
+
+Что есть:
+- 13/13 jackpot и Mega Jackpot Pro на 17 событий;
+- категории 13/13, 14/14, 15/15, 16/16, 17/17;
+- базовая ставка KSH 99;
+- возможность doubles/triples, то есть несколько исходов на одно событие;
+- понятная массовая механика через SMS/USSD/app;
+- прогрессирующий jackpot, если нет победителя.
+
+Что полезно взять:
+- простой формат "1 / X / 2";
+- отдельные категории сложности вместо одного тяжёлого режима;
+- doubles/triples как понятный способ подстраховки;
+- низкий вход около 1 USD;
+- UX, в котором игрок быстро понимает: сколько событий, сколько стоит, какой потенциальный выигрыш.
+
+Что нельзя брать:
+- discretionary обработку отменённых/перенесённых матчей;
+- короткие claim/forfeiture правила как основу доверия;
+- закрытую модель, где игрок не видит полный payout manifest;
+- зависимость от внутреннего решения оператора без публичной криптографической проверки.
+
+Вывод для OX:
+SportPesa - лучший UX-ориентир для массового рынка, но не архитектурный ориентир. OX должен быть прозрачнее и формальнее.
+
+### 3.2 1xBet Toto-15
+
+Похожесть с OX: высокая.
+
+Что есть:
+- отдельный раздел Toto "15";
+- прогнозирование 15 событий;
+- по сторонним и региональным описаниям: выигрыши начинаются примерно с 9 правильных прогнозов;
+- возможен выбор нескольких исходов на одно событие;
+- prize pool распределяется по категориям правильных прогнозов;
+- есть jackpot/накопительный компонент.
+
+Что полезно взять:
+- несколько уровней выигрыша, а не только jackpot;
+- системные ставки/несколько исходов на событие;
+- отдельный режим Toto, не смешанный с обычным sportsbook;
+- быстрый ежедневный или регулярный формат тиражей.
+
+Что нельзя брать:
+- непрозрачность расчёта итогового фонда и распределения;
+- внутреннее право оператора менять лимиты/отказывать/частично принимать ставку без понятного публичного trace;
+- зависимость от закрытой базы оператора как единственного source of truth.
+
+Вывод для OX:
+1xBet доказывает, что спрос на механику 15 событий есть. Но OX не должен соревноваться только количеством событий или размером jackpot. Главная дифференциация - проверяемая выплата и публичная история.
+
+### 3.3 1xBit
+
+Похожесть с OX: средняя.
+
+Что есть:
+- crypto-first sportsbook;
+- отдельная страница Toto Fifteen;
+- поддержка большого числа криптовалют;
+- акцент на быстрые crypto withdrawal;
+- сильный маркетинг анонимности и "без документов" для стандартных аккаунтов.
+
+Что полезно взять:
+- crypto onboarding как отдельный UX-поток;
+- быстрые stablecoin/crypto депозиты и выплаты;
+- понятную историю ставок и транзакций;
+- crypto-native аудит платежей.
+
+Что нельзя брать:
+- маркетинг "полная анонимность / no KYC" как продуктовый принцип;
+- обещание 100% выплат без проверки как юридически рискованную формулировку;
+- смешивание sportsbook, casino и toto в одну шумную витрину;
+- опору на доверие к централизованному crypto-оператору вместо проверяемого settlement.
+
+Вывод для OX:
+1xBit полезен как пример crypto onboarding, но не как compliance-ориентир. Для OX честнее: KYC/compliance на входе по risk threshold, а не обещание полной анонимности.
+
+### 3.4 XBet / TotoBrief "Пятнашка"
+
+Похожесть с OX: высокая.
+
+Что есть:
+- 15 событий;
+- публичная история тиражей и результатов;
+- значимый накопительный jackpot;
+- по собранной истории TotoBrief: средний интервал между вероятными срывами jackpot около 28 дней, медиана около 18 дней;
+- по оценке из истории: для месячного jackpot по модели Пятнашки нужен порядок сотен тысяч линий в день, а не несколько тысяч.
+
+Что полезно взять:
+- публичный архив тиражей;
+- регулярность продукта;
+- понятную статистику jackpot/pool/результатов;
+- продуктовый ориентир для OX-15 как MVP.
+
+Что нельзя брать:
+- недостаточно прозрачный источник полной экономики купонов;
+- зависимость от внешнего сайта/оператора как единственного подтверждения истории;
+- отсутствие публичного криптографического доказательства payoutRoot/refundRoot.
+
+Вывод для OX:
+Пятнашка - сильный математический benchmark. Она подтверждает, что OX-15 реалистичнее для MVP, чем OX-16, если нужен регулярный jackpot и публичная история побед.
+
+### 3.5 Bet9ja Super9ja
+
+Похожесть с OX: низкая/средняя.
+
+Что есть:
+- free-to-enter weekly football jackpot;
+- 6 матчей;
+- exact score, а не 1/X/2;
+- leaderboard и top-20 consolation prizes;
+- сильная промо-механика для привлечения и удержания игроков.
+
+Что полезно взять:
+- бесплатный или почти бесплатный промо-режим как acquisition funnel;
+- leaderboard как маркетинговый слой, если он не влияет на core payout;
+- простую механику "предскажи 6 матчей" для демо-режима OX.
+
+Что нельзя брать:
+- смешивать free promo с платным totalizator в одном юридическом режиме;
+- делать leaderboard source of truth для выплат OX;
+- переносить exact-score механику в MVP, потому что она меняет математику и усложняет продукт.
+
+Вывод для OX:
+Bet9ja полезен не как прямой конкурент, а как идея для бесплатного демо-режима или промо-воронки B2B-операторов.
+
+### 3.6 Испания: La Quiniela
+
+Похожесть с OX: высокая по тотализаторной логике, низкая по blockchain.
+
+Что есть:
+- 14 матчей 1/X/2 плюс Pleno al 15 с точным счётом дополнительного матча;
+- 55% сборов направляется в призовой фонд;
+- ставка La Quiniela - 0,75 EUR за линию, обычно минимум 2 ставки;
+- доступны multiple, conditioned и reduced bets;
+- опубликованы вероятности категорий выигрыша: все 15 - примерно 1 к 76 527 504, 14 - 1 к 4 782 969, 13 - 1 к 170 820, 12 - 1 к 13 140, 11 - 1 к 1 643, 10 - 1 к 299;
+- есть Elige8 как дополнительная игра на 8 выбранных матчей.
+
+Что полезно взять:
+- официальную таблицу вероятностей прямо в интерфейс;
+- reduced bets как зрелую систему "меньше цена - меньше гарантия покрытия";
+- отдельный glossary и правила категорий;
+- публичную, устойчивую и юридически читаемую структуру продукта;
+- малый base price как массовый стандарт.
+
+Что нельзя брать:
+- государственную модель как юридическое оправдание для OX: SELAE работает в своей лицензии и стране, OX так автоматически не может;
+- 55% payout ratio как обязательную экономику OX без пересчёта jackpot reserve, fees, gas, operator share и anti-whale;
+- Pleno al 15 с точным счётом в MVP, потому что это отдельная вероятностная модель.
+
+Вывод для OX:
+La Quiniela - лучший эталон формального описания правил. Для OX полезнее всего взять не бренд и не точный счёт, а прозрачность правил, reduced bets и таблицу вероятностей.
+
+### 3.7 Испания: El Quinigol
+
+Похожесть с OX: средняя.
+
+Что есть:
+- 6 футбольных матчей;
+- прогноз точного количества голов каждой команды: 0, 1, 2 или M для 3+;
+- 55% сборов направляется в призовой фонд;
+- ставка 1 EUR;
+- можно выбирать несколько результатов на один матч;
+- вероятность 6 из 6 примерно 1 к 16 777 216.
+
+Что полезно взять:
+- понятную краткую игру на 6 событий как demo/side product;
+- multiple selection на событие;
+- публичное раскрытие вероятностей.
+
+Что нельзя брать:
+- exact-score/goal-score механику в основной MVP OX;
+- усложнение купона до того, как core OX-15 подтвердит спрос.
+
+Вывод для OX:
+Quinigol может быть post-MVP side mode, но не должен отвлекать от OX-15.
+
+### 3.8 On-chain betting protocols: Overtime, SX Bet, Azuro, Polymarket
+
+Похожесть с OX: низкая по механике, высокая по инфраструктурным идеям.
+
+Что есть:
+- Overtime - on-chain sportsbook ecosystem со смарт-контрактами и oracle/data feeds;
+- SX Bet - peer-to-peer blockchain betting exchange;
+- Azuro - протокол prediction markets с tooling, oracle и liquidity solutions;
+- Polymarket - prediction market, где пользователи торгуют исходами событий, а settlement идёт через smart contracts.
+
+Что полезно взять:
+- non-custodial или proof-based settlement мышление;
+- публичный рынок/историю результатов;
+- API/data layer для интеграторов;
+- separation между интерфейсом, liquidity/settlement и oracle/result layer.
+
+Что нельзя брать:
+- путать prediction market с тотализатором;
+- переносить ambiguous market resolution, где спор решается governance/clarification после факта;
+- делать OX рынком "любой темы"; спорт должен оставаться понятным, лицензируемым и проверяемым;
+- строить MVP на сложной P2P liquidity/exchange модели вместо простого pooled totalizator.
+
+Вывод для OX:
+On-chain protocols полезны как инфраструктурный benchmark, но OX должен оставаться тотализатором с каноническим draw lifecycle, а не превращаться в prediction exchange.
+
+## 4. Что взять в OX для модернизации
+
+1. Ставка от 1 USDC как массовый base price.
+
+Причина: SportPesa KSH 99, La Quiniela 0,75 EUR и Quinigol 1 EUR показывают, что массовый toto-продукт должен иметь низкий вход. Решение OX о старте с 1 USDC правильное.
+
+2. OX-15 как главный MVP, OX-16 как post-MVP.
+
+Причина: рынок 15 событий уже понятен, математически менее тяжёлый и лучше подходит для регулярной истории jackpot. OX-16 полезен как более редкий premium jackpot, но не как стартовый массовый продукт.
+
+3. System bets: doubles/triples/multiple selections.
+
+Причина: игроки хотят подстраховку. Это есть у SportPesa, 1xBet/1xBit, La Quiniela/Quinigol. В OX это нужно реализовать через combo count, quote, anti-whale limits и clear exposure.
+
+4. Reduced bets.
+
+Причина: испанская La Quiniela показывает зрелую модель редуцированных купонов. Для OX это можно добавить post-MVP как "smart coverage": пользователь платит меньше, но видит, какую гарантию покрытия он получает.
+
+5. Таблица вероятностей в интерфейсе.
+
+Причина: La Quiniela/Quinigol публично показывают вероятности категорий. OX должен показывать вероятность jackpot и нижних категорий прямо в preview/quote.
+
+6. Публичная история тиражей.
+
+Причина: Пятнашка/TotoBrief полезны именно историей. OX должен сделать это сильнее: drawId, resultRoot, payoutRoot, refundRoot, pool, jackpot, count winners, paid/unclaimed.
+
+7. Публичный payout manifest без PII.
+
+Причина: это основная разница OX с централизованными букмекерами. Нужны playerHash/ticketHash/operatorId/jurisdictionId/payout amount/claim status без раскрытия личности.
+
+8. Операторский B2B промо-режим.
+
+Причина: Bet9ja Super9ja показывает ценность free-to-enter игры. Для OX можно сделать demo/free prediction mode для локальных операторов, но отдельно от платного totalizator settlement.
+
+9. Чёткий void/reduced/refund path.
+
+Причина: у конкурентов часто остаётся discretionary логика. OX должен отличаться заранее опубликованной state machine: reduced draw допустим до установленного минимума valid events, ниже - refundRoot.
+
+10. API для операторов и аудиторов.
+
+Причина: on-chain protocols сильны интеграциями. OX B2B должен иметь canonical API: draw list, quote, ticket status, result status, payout status, claimability, jackpot state.
+
+## 5. Что категорически нельзя брать в OX
+
+1. "Оператор может отменить/изменить/частично принять ставку без объяснения".
+
+Для OX это разрушает девиз честности. Любое исключение должно иметь reasonCode, evidenceHash, audit log и понятный refund path.
+
+2. "KYC после выигрыша как способ задержать выплату".
+
+Для OX базовый принцип должен остаться прежним: KYC/compliance на входе по risk threshold и объективным legal/AML triggers, а не потому что пользователь выиграл.
+
+3. "Анонимно, без документов, гарантируем выплату".
+
+Для crypto-маркетинга это звучит красиво, но для B2B/B2B2C и лицензированных операторов опасно. OX должен быть crypto-transparent, но compliance-aware.
+
+4. "Мгновенная выплата" без review window.
+
+Правильная формулировка: быстрая выплата после публикации финального payoutRoot и завершения обязательного review/timelock. Не обещать мгновенность там, где нужна проверка.
+
+5. "Один сайт/сервер оператора - единственный source of truth".
+
+В OX source of truth при споре: контракт, опубликованные roots, signed manifests, immutable audit logs. Backend и indexer - обслуживающие слои, не финальная истина.
+
+6. Смешивание casino/sportsbook/toto в один шумный продукт.
+
+OX должен стартовать узко: sport totalizator/jackpot. Casino и random games ухудшат юридическое и репутационное позиционирование.
+
+7. Prediction market ambiguity.
+
+OX нельзя строить как спорный рынок, где исход уточняется "clarification" после факта. Спорт должен иметь заранее определённый source, tie-break process и finality rule.
+
+8. Неограниченное покрытие всех комбинаций без anti-whale.
+
+System bets нужны, но только через quote, exposure limits, max combinations, dynamic price/soft cap и KYC threshold.
+
+## 6. Практические решения для ТЗ OX
+
+Канонически закрепить:
+- MVP: OX-15, baseComboPrice = 1 USDC;
+- OX-16: post-MVP/premium mode;
+- system bets: MVP допускает limited multiple selections, но с hard combination cap;
+- reduced bets: post-MVP, но архитектурно предусмотреть;
+- public probability table: обязательно в UX;
+- public draw archive: обязательно в MVP;
+- payout/refund manifest: обязательно в MVP;
+- free/demo mode для B2B операторов: post-MVP или pilot-only, без смешивания с платным pool;
+- 1xBit-style no-KYC marketing: запрещено;
+- SportPesa-style simple UX: взять;
+- La Quiniela-style formal rules/probabilities/reduced bets: взять;
+- Bet9ja-style free promo: взять только как отдельную маркетинговую механику.
+
+## 7. Сводная таблица: что брать / что не брать
+
+| Конкурент | Взять | Не брать |
+|---|---|---|
+| SportPesa | low entry, categories, doubles/triples, простой UX | закрытый settlement, discretionary void/refund, короткий forfeiture |
+| 1xBet Toto-15 | 15 событий, уровни выигрыша, multiple outcomes | непрозрачный source of truth, operator-only payout logic |
+| 1xBit | crypto onboarding, быстрые crypto payouts | no-KYC/anonymous promises, шумный sportsbook+casino UX |
+| XBet/Пятнашка | публичную историю тиражей, регулярность, OX-15 benchmark | отсутствие криптографического payout proof |
+| Bet9ja Super9ja | free demo/promo funnel, leaderboard | смешение free promo с платным pool |
+| La Quiniela | формальные правила, probabilities, reduced bets | государственную модель как юридическое прикрытие OX |
+| Quinigol | короткий side mode на 6 событий, multiple outcomes | exact-score как основной MVP |
+| Overtime/SX/Azuro/Polymarket | on-chain settlement ideas, API, auditability | prediction-market ambiguity, сложную P2P liquidity model в MVP |
+
+## 8. Итоговое заключение
+
+OX не должен пытаться доказать уникальность через "мы первые сделали 15 событий". Это неправда и стратегически слабо.
+
+Правильная формула:
+OX = знакомая mass-market toto/jackpot механика + 1 USDC вход + прозрачный on-chain settlement + публичная история выплат + B2B/B2B2C подключение локальных лицензированных операторов.
+
+Ключевая модернизация после анализа конкурентов:
+- оставить OX-15 основой MVP;
+- сделать UX ближе к SportPesa/La Quiniela по простоте;
+- сделать proof layer сильнее всех централизованных конкурентов;
+- не копировать no-KYC crypto-bookmaker риторику 1xBit;
+- не превращать OX в prediction market;
+- использовать free/demo режим только как операторскую воронку, а не как замену основного продукта.
+
+## 9. Использованные источники
+
+SportPesa:
+- https://www.ke.sportpesa.com/how-to-play
+- https://blog.ke.sportpesa.com/2025/08/12/sportpesa-mega-jackpot/
+
+1xBet / 1xBit:
+- https://1xbet.com/en/toto/fifteen
+- https://1xbet.com/en/information/rules/12
+- https://1xbit.com/en/toto/fifteen
+- https://1xbit.com/en
+- https://1xbet-nigeria.com/toto-1xbet/ - использован как неофициальное региональное описание механики Toto-15, не как юридический источник.
+
+Bet9ja:
+- https://www.bet9ja.com/super9ja/howtoplay
+- https://www.bet9ja.com/super9ja/termsandconditions?IDLingua=2
+- https://help.bet9ja.com/sport-tcs/
+
+Испания / SELAE:
+- https://www.loteriasyapuestas.es/en/centro-de-ayuda/como-se-juega/como-jugar-a-la-quiniela
+- https://www.loteriasyapuestas.es/en/centro-de-ayuda/como-se-juega/como-jugar-a-el-quinigol
+- https://www.loteriasyapuestas.es/en/paginas-informativas/quinielas-reducidas-maximiza-tus-posibilidades
+- https://www.loteriasyapuestas.es/f/loterias/documentos/Quiniela/Normativa%20Quiniela/NORMAS_LA_QUINIELA_TEMPORADA_19_20.pdf
+- https://www.loteriasyapuestas.es/f/loterias/documentos/normativa/Normativa%20de%20los%20juegos/Normas_de_el_Quinigol_Agosto_2017.pdf
+
+On-chain protocols:
+- https://docs.overtime.io/
+- https://docs.sx.bet/user-guides/getting-started/overview
+- https://azuro.org/
+- https://gem.azuro.org/
+- https://docs.polymarket.com/

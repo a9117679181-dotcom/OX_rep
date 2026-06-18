@@ -1,0 +1,538 @@
+Ниже — честная карта рынка первых потенциальных операторов для OX. Я разделил их на 3 тира так, как ты попросил, но с одной важной поправкой: “блокчейн-букмекер” и “крипто-букмекер” — это не одно и то же.
+Есть:
+On-chain/Web3 betting protocols — ставки/расчеты реально идут через блокчейн или non-custodial-модель: SX Bet, Overtime, Azuro, Dexsport.
+Crypto-native sportsbooks/casinos — пользователь вносит BTC/ETH/USDT/USDC, но продукт чаще централизованный: Cloudbet, Sportsbet.io, Thunderpick, BetFury, Rollbit, Stake, BC.Game, Bitcasino.io, Bets.io.
+Классические фиатные букмекеры — SportyBet, Bet9ja, BetKing, SportPesa, Betway и т.д.
+Для первого пилота я бы целился не в самых крупных, а в mid-tier crypto sportsbooks, где уже есть крипто-аудитория, но нет собственного сильного глобального jackpot/toto-продукта.
+1. Методология оценки
+Я оценивал операторов по 7 критериям:
+Критерий
+Почему важно для OX
+Crypto-readiness
+Нужно ли объяснять пользователям wallet/crypto/USDC.
+Sportsbook focus
+OX — спортивный jackpot, не casino game.
+Jackpot gap
+Есть ли у оператора уже сильный jackpot/toto-продукт.
+Лицензия / юрисдикция
+Curaçao, Anjouan, другое; насколько это приемлемо для пилота.
+Размер аудитории
+Использовал web visits как proxy, не как точное MAU.
+Вероятность B2B-пилота
+Готов ли оператор подключать внешний продукт.
+Репутационный риск
+Важно для будущего инвестора и бренда OX.
+Важно: web visits ≠ уникальные пользователи. Например, 10 млн visits в месяц могут означать 500 тыс.–2 млн активных пользователей, если один пользователь делает много сессий. Поэтому ниже я даю не точное количество людей, а рабочую оценку масштаба.
+2. Общий вывод по трем тирам
+Лучший стартовый тир для OX
+Tier 1B: crypto-native sportsbooks/casinos среднего размера.
+Это не полностью on-chain-протоколы, но они уже принимают крипту, понимают crypto-gambling, умеют работать с offshore-лицензиями и могут быстрее согласиться на пилот.
+Лучшие первые кандидаты:
+Cloudbet
+Sportsbet.io
+Thunderpick
+BetFury
+Bets.io
+Dexsport
+Bitcasino.io / Sportsbet.io group
+Rollbit — later-stage, не первый заход
+BC.Game — later-stage, осторожно
+Stake — не первый заход, слишком крупный
+3. Tier 1A — on-chain / Web3 betting protocols
+Это самые технологически близкие к OX проекты, но не обязательно лучшие первые коммерческие партнеры. Некоторые из них скорее конкуренты или инфраструктурные аналоги, чем операторы-покупатели.
+3.1. SX Bet / SX Network
+Тип: Web3 sports betting exchange / prediction-market exchange.Формат: peer-to-peer betting exchange, USDC, on-chain settlement.Масштаб: SX Network публично указывает $500M+ betting volume, 10,000+ users и 1.75M+ bets placed; более свежие отраслевые источники по SX Bet указывают примерно $1.2B cumulative volume и $500M за последний год.
+Почему интересен для OX:
+аудитория уже понимает USDC;
+sports-native;
+blockchain betting;
+сильная техническая совместимость;
+может быть benchmark по Web3 betting.
+Почему не идеальный первый партнер:
+у них уже есть собственная betting exchange-модель;
+они могут воспринимать OX как конкурента;
+их продукт ближе к exchange/prediction market, а не к операторскому jackpot-продукту;
+они вряд ли быстро станут “оператором”, который подключает внешний toto-продукт.
+Вердикт:Не первый коммерческий оператор. Использовать как benchmark и потенциальный разговор про интеграцию/кросс-продукт только после proof case.
+Приоритет: Medium.
+3.2. Overtime Markets
+Тип: decentralized / on-chain sportsbook.Формат: on-chain sportsbook, AMM/liquidity architecture, crypto sports betting.Позиционирование: Overtime описывает себя как sportsbook, который дает decentralization, instant liquidity и competitive odds.
+Сигналы масштаба: независимые обзоры указывают на $200M+ total betting volume и 50,000+ active users, но это не официальный audited источник, поэтому использовать как ориентир, не как факт.
+Плюсы для OX:
+web3-аудитория;
+on-chain betting;
+спортивный фокус;
+пользователь понимает крипто-ставки.
+Минусы:
+скорее конкурент, чем оператор;
+нет локальной лицензии как у обычного букмекера;
+B2B-интеграция OX туда может быть сложной;
+у них уже есть собственная логика ставок и ликвидности.
+Вердикт:Хороший benchmark, но не лучший первый клиент.
+Приоритет: Low/Medium как партнер, High как конкурентный benchmark.
+3.3. Azuro
+Тип: инфраструктурный протокол для prediction/betting apps.Формат: SDK, liquidity layer, prediction/betting infrastructure.Azuro позиционирует себя как инфраструктуру для создания prediction market apps с SDK, data feeds и liquidity rails.
+Сигналы масштаба: публичные материалы указывают на десятки тысяч пользователей и сотни миллионов долларов volume, но эти данные нужно проверять через Dune/он-чейн аналитику.
+Плюсы:
+инфраструктурно близко;
+может быть не оператором, а технологическим слоем;
+возможен вариант “строить часть OX поверх Azuro”.
+Минусы:
+не конечный оператор;
+не дает готовую пользовательскую аудиторию;
+может конфликтовать с твоей собственной архитектурой;
+если OX строит собственный jackpot/toto core, Azuro может быть не нужен.
+Вердикт:Не оператор для пилота. Инфраструктурный benchmark / возможный technical partner.
+Приоритет: Low как клиент, Medium как инфраструктурный контакт.
+3.4. Dexsport
+Тип: Web3 / crypto sportsbook + casino.Формат: no-KYC / wallet-oriented betting, sportsbook + casino.Лицензия: некоторые обзоры указывают Anjouan, но это нужно подтвердить на официальных страницах Dexsport перед любыми переговорами.
+Плюсы:
+crypto-native аудитория;
+sportsbook;
+no-KYC positioning;
+потенциально ближе к OX по философии “быстро, крипто, без лишнего трения”.
+Минусы:
+Anjouan — репутационно слабее Curaçao;
+может быть слишком Web3-нишевая аудитория;
+нужно проверить реальный объем, лицензию и команду;
+может быть ограниченная ликвидность/трафик по сравнению с Cloudbet/Sportsbet/Thunderpick.
+Вердикт:Интересный первый или второй пилот, если команда открыта к партнерствам.
+Приоритет: High для первого outreach, но с due diligence.
+4. Tier 1B — crypto-native sportsbooks/casinos
+Это, на мой взгляд, самая реалистичная первая группа для OX.
+4.1. Cloudbet
+Тип: crypto sportsbook + casino.Позиционирование: Cloudbet называет себя crypto-native sportsbook and casino, основанным в 2013 году, поддерживающим 30+ cryptocurrencies, instant deposits, быстрые выплаты, sportsbook и 3000+ casino games.
+Масштаб: Trustpilot-страница Cloudbet описывает платформу как longest-running crypto-betting platform, с millions of bets и hundreds of thousands of users globally; Semrush competitor data показывает Cloudbet около 1.13M visits в мае 2026.
+Лицензия: публичные обзоры и источники указывают Curaçao; перед переговорами нужно подтвердить официальный license number в footer/terms.
+Почему хороший кандидат:
+чистый crypto sportsbook DNA;
+не такой гигант, как Stake;
+пользователи уже понимают crypto;
+бренд исторически связан со спортивными ставками, а не только casino;
+может быть заинтересован в high-upside jackpot-продукте.
+Риск:
+у них уже сильный sportsbook;
+могут захотеть white-label контроль;
+могут потребовать доказанный proof case или supplier license.
+Как заходить:
+“Мы не конкурируем с вашим sportsbook. Мы предлагаем отдельный global football jackpot/toto module: 15 matches, jackpot, on-chain payout proof, API/widget integration, revenue share.”
+Приоритет: Very High.
+4.2. Sportsbet.io
+Тип: crypto sportsbook + casino.Юрлицо: Sportsbet.io указывает, что operated by mBet Solutions NV, Curaçao. Лицензия: Terms упоминают Curaçao Gaming licence issued by CGA; также есть restricted jurisdictions, завязанные на gaming license. Трафик: Semrush competitor page указывает Sportsbet.io около 551.62K visits в мае 2026.
+Плюсы:
+sports-first crypto brand;
+понятная аудитория;
+футбольные пользователи;
+уже существует sportsbook;
+хорошая совместимость с OX jackpot.
+Минусы:
+может быть связан с крупной группой / сложным decision-making;
+может не хотеть внешний jackpot-продукт;
+нужен proof case или очень сильный pilot pitch.
+Вердикт:Один из лучших Tier 1B-кандидатов.
+Приоритет: Very High.
+4.3. Thunderpick
+Тип: crypto sportsbook / esports betting / casino.Лицензия: источники указывают Paloma Media B.V. и Curaçao LOK; некоторые обзоры указывают license No. OGL/2024/677/0722. Фокус: esports + crypto betting + casino.
+Плюсы:
+crypto-native;
+esports/audience younger;
+likely flexible product culture;
+не такой гигант, как Stake;
+потенциально быстрее на пилот.
+Минусы:
+не football-first;
+аудитория может быть больше esports/casino, чем football jackpot;
+нужно понять, есть ли у них appetite к football-toto продукту.
+Как заходить:
+“World Cup 2026 / global football jackpot module for crypto users.”
+Это может быть сильным углом.
+Приоритет: High.
+4.4. BetFury
+Тип: crypto casino + sportsbook.Трафик: Semrush показывает 1.27M visits в мае 2026, с заметными странами Brazil, Norway, Malaysia, Lithuania, Japan. Лицензия: BetFury публично объявлял о получении Curaçao license; текущий статус нужно подтвердить в актуальных terms/footer.
+Плюсы:
+crypto-native;
+заметный трафик;
+может быть более открытым к партнерствам, чем гиганты;
+sportsbook присутствует;
+аудитория уже привыкла к crypto.
+Минусы:
+casino-first perception;
+может быть не sport/jackpot-first;
+нужно проверить реальную активность sportsbook-раздела, а не только casino.
+Вердикт:Хороший кандидат для early outreach.
+Приоритет: High.
+4.5. Bets.io
+Тип: crypto casino + sportsbook.Лицензия: обзоры указывают Anjouan license. Позиционирование: crypto-exclusive casino and sportsbook, launched 2021, large game catalog.
+Плюсы:
+crypto-only;
+Anjouan означает, что они могут быть гибче к новым B2B-продуктам;
+mid-tier, потенциально доступнее для переговоров;
+может быть проще получить пилот.
+Минусы:
+Anjouan — слабее для инвесторского доверия;
+возможно casino-heavy;
+нужно проверить sports traffic;
+меньше брендовой силы.
+Вердикт:Очень хороший кандидат для первого “быстрого” пилота, но юридически и репутационно осторожно.
+Приоритет: High для пилота, Medium для долгосрочного бренда.
+4.6. Bitcasino.io
+Тип: crypto casino с историческим crypto-branding.Лицензия: Bitcasino.io указывает Moon Technologies B.V., Curaçao, license OGL/2023/111/0069, issued by GCB and extended by CGA under LOK.
+Плюсы:
+лицензия видна и хорошо оформлена;
+известный crypto brand;
+может входить в экосистему с Sportsbet.io;
+strong crypto user base.
+Минусы:
+casino-first, не sportsbook-first;
+для OX лучше заходить через Sportsbet.io, если речь о спортивном jackpot;
+может быть крупнее и сложнее для раннего пилота.
+Вердикт:Интересен как group-level контакт, но не первый самостоятельный таргет.
+Приоритет: Medium.
+4.7. Rollbit
+Тип: crypto casino + sportsbook + trading-like products.Трафик: Semrush показывает 2.83M visits в мае 2026, средняя сессия 14:32. Лицензия: Rollbit terms указывают license OGL/2024/1260/0494.
+Плюсы:
+большой crypto-gambling brand;
+сильная high-risk audience;
+может быстро масштабировать jackpot.
+Минусы:
+casino/trading perception;
+вероятно сложнее зайти без proof case;
+может скопировать идею;
+не лучший первый партнер.
+Вердикт:Second wave после первого proof case.
+Приоритет: Medium later-stage.
+4.8. BC.Game
+Тип: крупный crypto casino + sportsbook.Трафик: Similarweb показывает BC.Game в мае 2026 с сильной глобальной аудиторией; топ-страной указана Nigeria, затем США, Thailand, Korea, Indonesia. Лицензия: BC.Game объявлял о Curaçao LOK license в 2024, но затем были сообщения о withdrawal from Curaçao после конфликта/банкротного решения; это требует отдельного due diligence.
+Плюсы:
+огромная crypto-аудитория;
+географии интересны для OX;
+strong casino/gambling traffic.
+Минусы:
+лицензионная история сложная;
+репутационный риск;
+слишком крупный и не лучший для первого пилота;
+casino-first.
+Вердикт:Не идти первым. Использовать как later-stage target после юридической проверки.
+Приоритет: Low для первого пилота, Medium later.
+4.9. Stake
+Тип: крупнейший crypto casino/sportsbook brand.Трафик: Semrush показывает 121.74M visits в мае 2026 на stake.com; Stake.us отдельно — 63.47M visits. Лицензии: Stake имеет отдельную страницу official gambling licenses; публичные источники указывают Curaçao license OGL/2024/1451/0918, а также credentials по Colombia, Mexico, Peru.
+Плюсы:
+огромная аудитория;
+crypto-native;
+sports + casino;
+глобальная узнаваемость.
+Минусы:
+не первый таргет;
+очень сложно достучаться;
+может построить такой продукт сам;
+потребует доказанный кейс, аудит, юридическую чистоту;
+риск “поглотят или скопируют”.
+Вердикт:Не стартовать со Stake. Держать как стратегический later-stage target.
+Приоритет: Low сейчас, High after proof case.
+4.10. 1xBit
+Тип: crypto sportsbook/casino, связанный с 1xBet-экосистемой по механике Toto.Плюсы:
+прямое знание формата;
+уже есть Toto/Pyatnashka;
+crypto-аудитория.
+Минусы:
+прямой конкурент;
+уже имеет аналогичный продукт;
+высокий риск копирования;
+бессмысленно предлагать им OX как новый продукт на раннем этапе.
+Вердикт:Не партнер. Это конкурент и benchmark.
+Приоритет: No-go как первый партнер.
+5. Рейтинг Tier 1B: кого реально атаковать первым
+Ранг
+Оператор
+Почему
+1
+Cloudbet
+Crypto sportsbook DNA, не слишком гигант, сильная история.
+2
+Sportsbet.io
+Sports-first crypto operator, Curaçao, хорошая совместимость.
+3
+Thunderpick
+Crypto/esports sportsbook, может быть гибким к пилотам.
+4
+BetFury
+1.27M visits, crypto-native, потенциально доступный.
+5
+Bets.io
+Anjouan, crypto-only, возможно гибкий early pilot.
+6
+Dexsport
+Web3/no-KYC, близкая философия, но проверить лицензию и объем.
+7
+Bitcasino.io
+Сильный crypto brand, но casino-first.
+8
+Rollbit
+Крупный, но later-stage.
+9
+BC.Game
+Крупный, но сложная license/reputation история.
+10
+Stake
+Огромный, но только после proof case.
+No-go
+1xBit
+Прямой конкурент с аналогичной Toto-механикой.
+6. Tier 2 — локальные или гибридные операторы, которые могут принимать crypto
+Здесь сложнее.
+Многие локальные лицензированные операторы не могут легально принимать crypto из-за локального регулирования платежей. Например, по Бразилии отраслевые юридические обзоры указывают, что regulated betting operators не могут принимать crypto assets как платежный метод; Reuters также сообщал, что Бразилия в 2026 заблокировала prediction-market platforms и ужесточила правила против “bet-like” продуктов.
+Поэтому Tier 2 нужно формулировать аккуратно:
+Это не “локальный оператор принимает крипту напрямую”, а “локальный оператор может быть открыт к crypto settlement на B2B-уровне или работать через payment-flexible/offshore контур”.
+Возможные Tier 2-кандидаты
+6.1. Thunderpick / Bets.io / Lucky Block / N1Bet / PariPesa-подобные бренды
+Часть таких брендов может работать как гибрид: user-facing crypto + sportsbook + offshore license + локальный маркетинг. Но нужно проверять каждую компанию отдельно.
+6.2. 1xBet / 22Bet / Melbet / BetWinner / Marathon / Pinnacle crypto-payment variants
+Некоторые списки crypto betting sites указывают классических или offshore-операторов как принимающих Bitcoin/crypto, включая 1xBet, 22Bet, Pinnacle, Marathon Bet. Но для OX это не значит, что они подходят как первые партнеры.
+Почему:
+у них уже много продуктов;
+сложная структура;
+могут копировать;
+могут не захотеть внешний jackpot;
+юридическая прозрачность может быть слабее, чем нужно инвестору.
+Вердикт по Tier 2:Tier 2 надо исследовать отдельно по странам и платежным правилам. В реальности многие “локальные + crypto” — это не локальные лицензированные операторы, а offshore-бренды, работающие в локальном рынке.
+7. Tier 3 — фиатные локальные букмекеры
+Это не первый этап, но стратегически важный второй/третий этап после proof case.
+7.1. SportyBet
+Тип: крупный фиатный/локальный оператор, особенно Africa.Трафик: Semrush показывает 58.57M visits в мае 2026, средняя сессия 14:20. Плюсы:
+огромная аудитория;
+сильный mobile-first betting behavior;
+Africa focus;
+может быть мощным партнером для country/operatorPool.
+Минусы:
+слишком крупный для первого захода;
+локальная юридика;
+KYC/fiat/tax/payment rails;
+может потребовать серьезный supplier compliance pack;
+может не хотеть внешний продукт.
+Вердикт:Сильный later-stage operator. Не первый пилот.
+7.2. Bet9ja
+Тип: Nigerian fiat betting operator.Трафик: Semrush показывает 18.48M visits в мае 2026. Плюсы:
+сильная Nigeria-аудитория;
+football culture;
+betting culture;
+потенциально интересный jackpot-market.
+Минусы:
+фиатный regulated context;
+Nigeria требует отдельного legal memo;
+у Bet9ja уже есть jackpot-like продукт Super9ja, но не тот же paid 15-match jackpot по доступным официальным данным из твоей стратегии;
+интеграция сложнее.
+Вердикт:Later-stage. Хороший benchmark и потенциальный партнер после proof case.
+7.3. BetKing
+Тип: Nigerian betting operator.Трафик: Semrush показывает 10.57M visits в мае 2026; Similarweb дает 15.8M total visits, то есть порядок величины подтверждается разными оценочными системами. Плюсы:
+крупная Nigeria-аудитория;
+высокая вовлеченность;
+может быть более доступен, чем SportyBet/Bet9ja.
+Минусы:
+локальная лицензия;
+fiat/KYC/tax;
+нужен operatorPool/countryPool, не global pool;
+крипто-путь не очевиден.
+Вердикт:Потенциально хороший Tier 3-кандидат после первого crypto-pilot.
+7.4. SportPesa
+Тип: локальный/международный оператор с сильным jackpot DNA.Сигналы: SportPesa официально говорит о 20M+ sports fans worldwide; Semrush Kenya gambling ranking показывает SportPesa на втором месте в Kenya с 1.47M visits в мае 2026. Плюсы:
+jackpot-механика уже понятна;
+сильный benchmark;
+Kenya football betting culture.
+Минусы:
+у них уже есть собственные jackpot-продукты;
+менее вероятно, что им нужен внешний OX;
+юридически сложный локальный рынок;
+скорее конкурент/benchmark, чем первый клиент.
+Вердикт:Сильный benchmark, не первый партнер.
+7.5. Betway Africa / South Africa
+Трафик: Betway.co.za показывает 35.79M visits в мае 2026. Плюсы:
+огромная аудитория;
+профессиональная структура;
+сильный sportsbook brand.
+Минусы:
+regulated fiat operator;
+decision-making сложный;
+crypto-интеграция маловероятна на раннем этапе;
+потребует юридически чистый B2B supplier model.
+Вердикт:Later-stage only.
+8. Сравнение тиров
+Тир
+Примеры
+Плюсы
+Минусы
+Когда идти
+Tier 1A: on-chain/Web3
+SX Bet, Overtime, Azuro, Dexsport
+Близко технологически, USDC/wallet-аудитория
+Часто конкуренты, не классические операторы
+Benchmark/точечные партнерства
+Tier 1B: crypto-native offshore
+Cloudbet, Sportsbet.io, Thunderpick, BetFury, Bets.io
+Лучший баланс: crypto-аудитория + sportsbook + гибкость
+Offshore risk, нужна проверка лицензий
+Первый пилот
+Tier 2: hybrid local/crypto
+1xBet/22Bet/Melbet-type, N1Bet/PariPesa-type
+Могут иметь локальный трафик + crypto rails
+Юридически мутная зона, надо проверять
+После Tier 1B research
+Tier 3: fiat local
+SportyBet, Bet9ja, BetKing, SportPesa, Betway
+Огромная аудитория, локальная лицензия
+Сложная интеграция, fiat/KYC/tax
+После proof case
+9. Кто лучше всего подходит для первого пилота
+Мой объективный shortlist:
+Группа A — лучшие первые outreach targets
+1. Cloudbet
+Лучший баланс: crypto sportsbook, история, не гигант, понятная аудитория.
+2. Sportsbet.io
+Sports-first crypto audience, Curaçao, хорошая совместимость с OX.
+3. Thunderpick
+Может быть очень хорошим под World Cup / football jackpot angle, особенно если они хотят расширить sports-фокус за пределы esports.
+4. BetFury
+Достаточный трафик, crypto-native, потенциально более доступный для B2B-пилота.
+5. Bets.io
+Гибкий Anjouan / crypto-only кандидат. Может быть самым доступным для первого маленького proof case, но хуже репутационно.
+6. Dexsport
+Интересен из-за Web3/no-KYC философии. Нужно проверить команду, лицензию, объем и готовность к внешним продуктам.
+Группа B — обращаться после первого proof case
+7. Rollbit
+Сильный бренд, но может копировать и не нуждаться в тебе до proof case.
+8. Bitcasino.io / Sportsbet.io group-level
+Интересно, но лучше заходить через sportsbook angle.
+9. BC.Game
+Огромная аудитория, но сложная лицензионная история.
+10. Stake
+Мощнейшая цель, но только после кейса. До этого почти бессмысленно.
+Группа C — не первыми
+1xBit
+Прямой конкурент. У них уже есть Toto/Pyatnashka. Не идти.
+1xBet
+Прямой конкурент и источник benchmark. Не идти.
+SportPesa
+Benchmark, потому что jackpot DNA сильный. Но у них уже есть jackpot-линейка.
+SportyBet / Bet9ja / BetKing
+Очень сильные Tier 3-цели, но только после legal/operator proof case.
+10. Лицензии: что важно понимать
+Curaçao
+Curaçao стал более серьезным после реформы LOK. Официальная CGA указывает, что она теперь регулирует online gaming industry на основании National Ordinance on Games of Chance / LOK.
+Это плюс для OX, если партнер имеет нормальный Curaçao LOK license. Но теперь Curaçao — не просто “легкая бумага”. Источники по реформе отмечают отмену старой master-license системы, переход к direct licensing и новые compliance-требования.
+Для OX: Curaçao-партнер лучше для инвестора, чем Anjouan-партнер.
+Anjouan
+Anjouan официально позиционируется как B2C/B2B internet gaming licensing jurisdiction.
+Но репутационный риск высокий. Le Monde в 2026 писал о проблемах Anjouan/Comoros ecosystem: opaque licensing, weak consumer protection, scams/money-laundering accusations.
+Для OX: Anjouan может быть быстрым пилотом, но не должен стать “лицом” долгосрочной regulated strategy.
+11. Какой pitch давать Tier 1B-оператору
+Не говорить:
+“Мы делаем блокчейн-тотализатор.”
+Сказать:
+“Мы даем вам готовый football jackpot/toto product без необходимости строить собственную settlement-архитектуру. Вы получаете новый retention-продукт для crypto-аудитории, а OX обеспечивает ticket commitment, resultRoot, payoutRoot, on-chain settlement proof, public payout history и reconciliation.”
+Для Tier 1B важны 5 аргументов:
+Новый продукт без разработки с нуля.
+Retention через большой jackpot.
+World Cup 2026 / football jackpot campaign.
+Публичное доказательство выплат.
+Revenue share / low integration pilot.
+12. Какая интеграционная модель для первого пилота
+Я бы не начинал с fully integrated B2B.
+Для первого пилота лучше:
+Pilot model: Operator referral + OX hosted jackpot
+Схема:
+Оператор показывает OX jackpot как partner campaign-> пользователь переходит в OX или открывает OX widget-> покупка идет в USDC-> OX делает settlement и payout proof-> оператор получает RevShare/CPA/partner fee
+Плюсы:
+меньше интеграции;
+быстрее проверить спрос;
+меньше риск для оператора;
+OX сохраняет прозрачность;
+не надо сразу строить сложный Operator Gateway.
+Минусы:
+оператор может не хотеть уводить пользователя;
+нужно правильно решить player ownership;
+юридически всё равно нужно определить operator of record.
+После успешного пилота:
+Phase 2: Operator Gateway
+operatorId + playerHash + ticketHash + payout proof + reconciliation
+Это уже более зрелая модель из твоего стратегического документа. Там правильно зафиксировано, что оператор отвечает за игрока/KYC/fiat/tax, а OX — за технологию, расчет, jackpot, payout proof и публичную историю.
+13. Основной риск первого тира
+Парадокс: чем более crypto-native оператор, тем проще интеграция, но тем выше риск, что он скажет:
+“Мы сами это сделаем.”
+Поэтому нельзя на первом звонке отдавать всю механику. Нужно продавать не “идею 15 матчей”, а:
+готовый audited core;
+payout proof;
+anti-whale model;
+public jackpot history;
+operator reconciliation;
+future network pool;
+speed to launch.
+То есть moat должен быть не в “15 матчах”, а в том, что OX уже построил trust infrastructure for jackpot settlement.
+14. Финальная рекомендация
+Кого атаковать первыми
+Я бы сделал 3 параллельных списка.
+Список 1 — основной outreach
+Cloudbet
+Sportsbet.io
+Thunderpick
+BetFury
+Bets.io
+Dexsport
+Цель: получить 10–15 discovery calls.
+Список 2 — later-stage
+Rollbit
+Bitcasino.io
+BC.Game
+Stake
+Цель: не продавать сейчас, а изучать требования и contacts.
+Список 3 — fiat/local future
+BetKing
+Bet9ja
+SportyBet
+SportPesa
+Betway Africa
+Betika
+Цель: готовить B2B/B2B2C operator package после proof case.
+15. Мой честный вывод
+Ты правильно мыслишь: начинать надо с crypto-bookmakers, а не с локальных фиатных гигантов.
+Но точнее так:
+Первый рынок OX — не “весь мир” и не “все букмекеры”. Первый рынок OX — mid-tier crypto sportsbooks/casinos, которым нужен новый football jackpot продукт перед World Cup 2026 и которые уже умеют работать с crypto-аудиторией.
+Самые сильные первые кандидаты:
+Cloudbet
+Sportsbet.io
+Thunderpick
+BetFury
+Bets.io
+Dexsport
+Самые опасные, но перспективные later-stage:
+Rollbit
+BC.Game
+Stake
+Не идти первыми:
+1xBit
+1xBet
+SportPesa
+SportyBet
+Bet9ja
+Они важны как benchmark и будущие цели, но не как старт.
+Главная задача сейчас — не “найти самого большого оператора”. Главная задача — найти первого оператора, которому нужен новый jackpot-продукт достаточно сильно, чтобы он согласился на pilot.
+Сделай как бы заключение, ну совсем коротенькое, просто как бы количество потенциальных пользователей OX, если как бы мы первых трёх-пятерых рекомендованных тобой операторов подключаем, как ты думаешь, какое количество пользователей как бы у нас появится потенциально? Сделай как бы краткий-краткий вывод.
+Короткий честный вывод:
+Если подключить 3–5 первых рекомендованных crypto-операторов уровня Cloudbet / Sportsbet.io / Thunderpick / BetFury / Bets.io / Dexsport, то потенциальный верхний охват OX может быть примерно:
+Потенциальная аудитория доступа
+1–5 млн пользователей, которые уже знакомы с crypto-betting / sportsbook / casino.
+Но это не значит, что все они станут игроками OX.
+Реалистичная конверсия в первый год
+Сценарий
+Активные пользователи OX
+Осторожный
+5 000–20 000
+Базовый
+20 000–75 000
+Сильный
+75 000–200 000+
+Мой честный ориентир
+Если подключить 3–5 правильных crypto-операторов и дать им нормальный jackpot-продукт, я бы считал хорошей целью:
+30 000–100 000 активных пользователей OX в первые 12–18 месяцев после запуска через операторов.
+Если продукт зайдет, будет большой джекпот, понятный UX и операторы реально будут его продвигать, можно идти выше:
+200 000+ активных пользователей — сильный, но достижимый сценарий.
+Главное: размер базы операторов может быть миллионы пользователей, но OX сначала получит только часть их внимания. Поэтому ключевой вопрос не “сколько у операторов пользователей”, а:
+сколько оператор готов реально показать OX своей аудитории.

@@ -134,7 +134,8 @@ EmergencyController
 | AccessController | роли, права, multisig-администрирование |
 | DrawManager | создание тиража, статусы, параметры, неизменность после Open |
 | TicketVault | покупка билетов, прием USDC, события TicketPurchased |
-| TreasuryVault | учет 80/10/10, джекпот, platform fee, gas reserve |
+| TreasuryVault | Direct OX Mode: учет 80/10/10, джекпот, platform fee, gas reserve |
+| OperatorVault / OperatorEscrow Adapter | B2B Operator-Controlled Escrow Mode: operator settlement, escrow reference, reconciliation events |
 | ResultRegistry | публикация result root/hash и версий результата |
 | PayoutVault | публикация payout root, claim, claimFor, refund |
 | EmergencyController | pause/unpause и аварийные сценарии |
@@ -374,6 +375,34 @@ WalletDrawSpendUpdated(drawId, buyer, totalSpent)
 ## 7. TreasuryVault
 
 TreasuryVault отвечает за учет средств.
+
+Важно: TreasuryVault является direct-custody вариантом. Для юридически безопасного B2B/B2B2C пилота архитектура должна также поддерживать OperatorVault / OperatorEscrow режим, где оператор является operator of record, а средства проходят через operator wallet / operator-controlled escrow.
+
+### 7.1. Custody modes
+
+#### Режим A: Direct OX Mode
+
+```text
+buyer wallet -> TicketVault -> TreasuryVault -> PayoutVault
+```
+
+В этом режиме OX smart contracts напрямую принимают и учитывают средства. Это технически проще, но юридически повышает риск, что OX будет считаться operator/co-operator, custodian или payment/VASP actor.
+
+#### Режим B: Operator-Controlled Escrow Mode
+
+```text
+operator wallet / operator balance -> OperatorVault или operator-controlled escrow -> OX proof/root layer -> payout reconciliation
+```
+
+В этом режиме:
+
+- оператор является player-facing operator of record;
+- OX фиксирует ticketHash/playerHash/operatorId/jurisdictionId/poolScope;
+- OX публикует resultRoot, payoutRoot/refundRoot и audit trail;
+- OX не может произвольно вывести player funds;
+- оператор обязан подтвердить payout через reconciliation report.
+
+Для B2B-пилота предпочтителен Режим B. Режим A допустим только после отдельного legal approval для direct crypto pilot.
 
 Базовое распределение:
 
@@ -955,6 +984,7 @@ EmergencyAction(actionType, reasonCode)
 - описан DrawManager;
 - описан TicketVault;
 - описан TreasuryVault;
+- описаны custody modes: Direct OX Mode и Operator-Controlled Escrow Mode;
 - описан ResultRegistry;
 - описан PayoutVault;
 - описан refund;
@@ -975,7 +1005,7 @@ EmergencyAction(actionType, reasonCode)
 Для MVP принимается модульная smart contract architecture:
 
 ```text
-DrawManager + TicketVault + TreasuryVault + ResultRegistry + PayoutVault + AccessControl
+DrawManager + TicketVault + TreasuryVault / OperatorVault + ResultRegistry + PayoutVault + AccessControl
 ```
 
 Ключевые решения:

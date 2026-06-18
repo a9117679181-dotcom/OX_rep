@@ -7,14 +7,14 @@
 - **ASSUMPTION:** OX не принимает игроков напрямую в регулируемых странах.
 - **ASSUMPTION:** OX работает как B2B/B2B2C-инфраструктура через локально лицензированных операторов.
 - **ASSUMPTION:** локальный оператор дает игроков, локальную лицензионную рамку, локальный маркетинг и отношения с пользователем.
-- **ASSUMPTION:** OX дает технологию, общий пул, смарт-контракт, выбор событий, расчет выплат, аудит и операционное сопровождение.
+- **ASSUMPTION:** OX дает технологию, network jackpot architecture, смарт-контракт/proof-layer, выбор событий, расчет выплат, аудит и операционное сопровождение.
 - Главный юридический вопрос: является ли OX просто B2B supplier/software provider или фактическим gambling co-operator.
-- Главный риск: единый трансграничный global pool.
-- Главный исследовательский вопрос: можно ли делать один глобальный пул или нужны country/operator/license-segregated sub-pools.
+- Главный риск: единый трансграничный globalPool до legal approval.
+- Главный исследовательский вопрос: какие poolScope допустимы по этапам: operatorPool, countryPool, licensePool, sharedJurisdictionPool или globalPool.
 
 ## Почему global pool важен
 
-**ASSUMPTION:** главный коммерческий актив OX Network - общий мировой пул ликвидности и сетевой эффект. Чем больше локальных операторов подключено к одному пулу, тем больше потенциальный джекпот и тем сильнее продукт для каждого следующего оператора.
+**ASSUMPTION:** главный коммерческий актив зрелой OX Network - сетевой jackpot effect. Но MVP/pilot должен начинаться с operatorPool/countryPool/licensePool; общий мировой globalPool возможен только после legal approval.
 
 Один локальный оператор обычно ограничен своей аудиторией. Несколько операторов, подключенных к одному тиражу, могут создать более крупный jackpot, который становится самостоятельным маркетинговым активом.
 
@@ -31,9 +31,9 @@
 - payout может идти из общего smart contract, а не из локального operator account;
 - регуляторы могут требовать локального ring-fencing player funds.
 
-## Модель 1: единый global pool
+## Модель 1: единый globalPool, только post-legal-approval
 
-**ASSUMPTION:** все допущенные операторы и игроки участвуют в одном тираже, одном jackpot и одном settlement layer.
+**ASSUMPTION:** все допущенные операторы и игроки участвуют в одном тираже, одном jackpot и одном settlement layer. Эта модель не является MVP/pilot default и допустима только после legal approval.
 
 Плюсы:
 
@@ -105,7 +105,7 @@
 
 ## Предварительная архитектурная рекомендация для исследования
 
-**ASSUMPTION:** техническая архитектура OX должна поддерживать как единый global pool, так и country/operator/license-segregated sub-pools. До юридического подтверждения нельзя считать global pool универсально допустимым.
+**ASSUMPTION:** техническая архитектура OX должна поддерживать network jackpot architecture with operatorPool/countryPool/licensePool first; globalPool only after legal approval. До юридического подтверждения нельзя считать globalPool универсально допустимым.
 
 Минимально нужны поля и механизмы:
 

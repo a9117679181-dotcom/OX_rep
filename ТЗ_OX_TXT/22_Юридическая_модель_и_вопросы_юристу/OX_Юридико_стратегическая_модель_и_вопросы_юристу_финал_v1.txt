@@ -1,0 +1,620 @@
+# OX - юридико-стратегическая модель и вопросы юристу
+
+Дата: 19.06.2026
+Статус: финализированный рабочий бриф для консультации с iGaming / crypto / VASP юристом.
+Важно: документ не является юридическим заключением и не является разрешением на запуск продукта.
+
+## 1. Короткий вывод
+
+Рекомендуемая стартовая модель OX:
+
+```text
+не прямой нелицензированный B2C-букмекер,
+а B2B/B2B2C technology / jackpot settlement-proof supplier для licence-verified / legally reviewed оператора, который является operator of record перед игроком.
+```
+
+OX предоставляет:
+
+- ticketHash;
+- playerHash;
+- operatorId;
+- jurisdictionId;
+- poolScope / poolId;
+- draw lifecycle;
+- resultRoot;
+- payoutRoot;
+- refundRoot;
+- Merkle proof / Merkle claim;
+- smart-contract settlement;
+- public payout history;
+- operator reconciliation tools;
+- audit log.
+
+Оператор отвечает за:
+
+- игрока;
+- KYC / age gate;
+- AML / sanctions / source of funds по своей модели;
+- пользовательские Terms;
+- responsible gaming;
+- geo/access control;
+- локальные платежи;
+- налоги;
+- поддержку;
+- complaints;
+- player-facing payout.
+
+Ключевое ограничение:
+
+```text
+такая модель является целевой, но не доказанной юридически.
+Юрист должен подтвердить, остаётся ли OX supplier/B2B supplier или становится co-operator/jackpot operator/payment/VASP actor.
+```
+
+## 2. Каноническая формулировка модели OX
+
+Рекомендуемая формулировка для документов и переговоров:
+
+```text
+OX is a B2B/B2B2C technology and settlement-proof infrastructure provider for sports jackpot/toto products.
+
+The partner operator remains the player-facing operator of record and is responsible for licensing, player onboarding, KYC/AML, responsible gaming, country access, local payments, tax handling, player support and payout delivery.
+
+OX provides auditable jackpot/toto infrastructure, smart-contract settlement, ticket commitments, resultRoot, payoutRoot, refundRoot, Merkle proof, public payout history and operator reconciliation tools.
+
+OX does not store player PII on-chain and does not replace the operator's licensing, KYC, AML, responsible gaming, tax or country-access obligations.
+```
+
+Русская версия:
+
+```text
+OX является B2B/B2B2C технологической и settlement-proof инфраструктурой для спортивного jackpot/toto-продукта.
+
+Партнёрский оператор остаётся player-facing operator of record и отвечает за лицензию, KYC/AML, responsible gaming, доступ по странам, локальные платежи, налоги, поддержку игроков и доведение выплаты до игрока.
+
+OX предоставляет проверяемую инфраструктуру: ticket commitment, resultRoot, payoutRoot, refundRoot, Merkle proof, smart-contract settlement, публичную историю выплат и operator reconciliation.
+
+OX не хранит PII игрока on-chain и не заменяет лицензионные, KYC/AML, налоговые и country-access обязанности оператора.
+```
+
+## 3. Что нельзя утверждать до юридического заключения
+
+До письменного legal memo нельзя утверждать:
+
+- что лицензия партнёра автоматически покрывает OX;
+- что offshore crypto-оператор сам по себе решает legal risk;
+- что Curaçao / Anjouan / другая offshore-лицензия разрешает globalPool;
+- что USDC settlement не создаёт VASP/payment/custody risk;
+- что OX может получать процент от handle/GGR и точно оставаться supplier-only;
+- что OX не нужен KYC/AML контур вообще;
+- что playerHash всегда не является персональными данными;
+- что UAE entity безопасна для gaming/facilitation без GCGRA анализа;
+- что "мгновенные выплаты" допустимы без result/payout review, timelock и compliance checks;
+- что globalPool можно открыть до анализа стран, лицензий, налогов и операторских разрешений.
+
+## 4. Предпочтительная стартовая роль OX
+
+| Зона | Ответственность оператора | Ответственность OX |
+|---|---|---|
+| Игрок | Регистрация, KYC, age gate, Terms, support, complaints | Не хранить PII; получать только hash/status flags |
+| Ставка / ticket | Принимает игрока в своём licensed/offshore контуре | Фиксирует ticketHash, operatorId, jurisdictionId, poolScope |
+| Платежи | Crypto deposit/withdrawal, fiat balance или внутренний баланс | Settlement infrastructure; smart-contract accounting по согласованной модели |
+| Результаты | Показывает статус игроку | Result aggregation, resultRoot, audit trail, manual fallback по процедуре |
+| Выплаты | Доводит выигрыш до игрока | PayoutRoot, Merkle proof, settlement to operator/player по модели |
+| Споры | Player support и локальная обработка претензий | Доказательная база: ticketHash, playerHash, payout obligation, reconciliation report |
+| Compliance | KYC/AML/geo/restricted countries | Технические блокировки, audit logs, sanctions/wallet checks если применимо |
+
+### 4.1. Custody modes: Direct OX Mode vs Operator-Controlled Escrow Mode
+
+Юридическая supplier-модель требует отдельного разделения custody.
+
+#### Режим A: Direct OX Mode
+
+```text
+player wallet -> OX smart contracts -> TreasuryVault -> PayoutVault
+```
+
+В этом режиме OX smart contracts принимают и учитывают средства напрямую.
+
+Риск:
+
+```text
+Direct OX Mode усиливает вероятность, что OX будет рассматриваться как operator/co-operator, custodian или payment/VASP actor.
+```
+
+Этот режим нельзя считать юридически безопасным B2B supplier-пилотом без отдельного legal approval.
+
+#### Режим B: B2B Operator-Controlled Escrow Mode
+
+```text
+operator wallet / operator balance -> OperatorVault или operator-controlled escrow -> OX proof/root/reconciliation layer
+```
+
+В этом режиме:
+
+- оператор является operator of record;
+- средства проходят через operator wallet, OperatorVault или operator-controlled escrow;
+- OX фиксирует ticketHash/playerHash/operatorId/jurisdictionId/poolScope;
+- OX публикует resultRoot, payoutRoot/refundRoot, Merkle proof и audit trail;
+- OX не может произвольно вывести player funds;
+- оператор обязан предоставить payout reconciliation report.
+
+Предпочтение для B2B-пилота:
+
+```text
+для юридически безопасного B2B/B2B2C пилота предпочтителен OperatorVault / operator-controlled escrow.
+TreasuryVault direct-custody режим должен рассматриваться как отдельный direct crypto pilot risk mode.
+```
+
+## 5. Три юридические модели для обсуждения
+
+### 5.1. Supplier-only / B2B technology provider
+
+Суть:
+
+```text
+OX предоставляет software, API, proof-layer и settlement tooling.
+Оператор является operator of record.
+```
+
+Плюсы:
+
+- самый лёгкий юридический нарратив;
+- быстрее для пилота;
+- ниже операционная нагрузка.
+
+Главный риск:
+
+```text
+если OX фактически управляет draw, pool, payoutRoot, jackpot reserve или player payout obligations, регулятор может увидеть B2B gaming supplier или co-operator.
+```
+
+### 5.2. B2B gaming supplier
+
+Суть:
+
+```text
+OX признаётся поставщиком критической gambling/software/settlement infrastructure и получает B2B/supplier license, если это требуется юрисдикцией или оператором.
+```
+
+Плюсы:
+
+- лучше для due diligence;
+- сильнее для крупных операторов;
+- честнее, если OX контролирует critical infrastructure.
+
+Минусы:
+
+- дороже;
+- дольше;
+- требует entity, compliance, AML, technical documentation, reporting.
+
+### 5.3. Co-operator / jackpot operator
+
+Суть:
+
+```text
+OX признаётся участником gambling operation совместно с оператором.
+```
+
+Плюсы:
+
+- юридически честно, если OX реально управляет draw/pool/jackpot/payout;
+- снижает риск "притворного supplier-only" позиционирования.
+
+Минусы:
+
+- может потребовать полноценной gambling license;
+- усложняет запуск;
+- повышает tax, AML, reporting и consumer protection обязанности.
+
+## 6. Юрисдикции: предварительная оценка
+
+### 6.1. Curaçao
+
+Статус: предпочтительный offshore-кандидат для legal review.
+
+Что подтверждено публичными источниками:
+
+- CGA является регулятором online gaming industry по LOK;
+- CGA portal предусматривает online gaming license и supplier license;
+- supplier license относится к gambling-related critical services and goods, включая games и sportsbook software;
+- supplier license может быть применим к entities established in Curaçao, с отложенным вступлением требования после LOK;
+- online gaming без лицензии in/from Curaçao запрещён.
+
+Что это значит для OX:
+
+```text
+Curaçao выглядит сильнее Anjouan для инвесторов и операторов, но OX должен отдельно проверить, требуется ли ему supplier license или другая лицензия, если OX предоставляет jackpot/sportsbook software, settlement layer, payoutRoot или controls player transactions/pool logic.
+```
+
+Вопрос юристу:
+
+```text
+Нужна ли OX Curaçao supplier license, если OX работает только B2B/B2B2C с Curaçao-licensed operator, но предоставляет jackpot software, resultRoot/payoutRoot и settlement infrastructure?
+```
+
+### 6.2. Anjouan
+
+Статус: возможный быстрый пилотный контур, но не preferred long-term reputation base.
+
+Что подтверждено публичными источниками:
+
+- Anjouan Gaming заявляет B2C и B2B internet gaming licensing;
+- B2B licences выдаются critical service suppliers, предоставляющим platform, software или technical services licensed B2C operators;
+- есть public register и compliance/reporting framework.
+
+Что это значит для OX:
+
+```text
+Anjouan может быть быстрым и дешёвым пилотным направлением, но репутационно слабее Curaçao и может хуже восприниматься крупными операторами, инвесторами и банками.
+```
+
+Вопрос юристу:
+
+```text
+Достаточна ли Anjouan B2B/B2C структура для первого OX pilot, если OX не является player-facing operator, но управляет settlement-proof infrastructure?
+```
+
+### 6.3. UAE
+
+Статус: только holding/tech hypothesis после отдельного UAE legal memo.
+
+Что подтверждено публичными источниками:
+
+- GCGRA является sole competent authority for commercial gaming licensing in the UAE;
+- commercial gaming включает lottery, internet gaming, sports wagering и land-based gaming;
+- engaging in, conducting or facilitating commercial gaming without GCGRA license is illegal and can lead to severe penalties;
+- запрет может распространяться и на third parties providing products or services related to the industry.
+
+Что это значит для OX:
+
+```text
+UAE entity нельзя использовать как gaming operating base или facilitation base без отдельного GCGRA анализа.
+UAE можно обсуждать только как holding/tech/IP/management контур, если юрист подтвердит отсутствие commercial gaming facilitation from UAE.
+```
+
+Вопрос юристу:
+
+```text
+Может ли OX иметь UAE holding/tech/IP entity, если gambling operation, operator contracting, treasury, servers and player-facing activities находятся вне UAE?
+```
+
+## 7. PoolScope legal model
+
+Стартовое правило:
+
+```text
+MVP и первый pilot не должны использовать globalPool по умолчанию.
+```
+
+Приоритетные pool scopes:
+
+1. `operatorPool` - один оператор, один пул.
+2. `countryPool` - один рынок/страна после local legal approval.
+3. `licensePool` - один лицензионный контур.
+4. `sharedJurisdictionPool` - несколько операторов в одной юрисдикции после approval.
+5. `globalPool` - только post-legal-approval.
+
+GlobalPool можно обсуждать только после ответов:
+
+- разрешено ли смешивать игроков из разных стран;
+- разрешено ли смешивать игроков из разных лицензий;
+- кто владеет jackpot reserve;
+- кто отвечает за tax withholding;
+- кто является operator of record;
+- как работает refund/void/unclaimed payout;
+- какие countries excluded;
+- создаёт ли pool payment/VASP/custody risk.
+
+## 8. KYC / AML / Compliance
+
+Каноническая позиция OX:
+
+```text
+KYC не должен использоваться как скрытый отказ от выплаты.
+KYC/compliance checks должны происходить до risk entry или по объективным legal/AML/sanctions triggers.
+```
+
+Возможная модель:
+
+- оператор выполняет KYC/AML;
+- OX получает KYC status flag без PII;
+- OX может требовать blocked/sanctions/risk flags;
+- OX фиксирует playerHash/ticketHash;
+- крупные выигрыши проходят заранее определённый compliance path;
+- blocked payout не попадает в активный payoutRoot как свободно claimable payout;
+- после разблокировки публикуется compensating/reissue root;
+- все блокировки имеют reasonCode, audit log, deadline и dispute path.
+
+Открытые вопросы юристу:
+
+- может ли KYC полностью оставаться у оператора;
+- нужен ли OX доступ к KYC-status без PII;
+- считается ли playerHash персональными данными, если оператор может сопоставить его с игроком;
+- какие KYC/EDD thresholds нужны для jackpot/toto;
+- что делать при крупном выигрыше;
+- как запретить hidden non-payment under KYC excuse.
+
+## 9. USDC / VASP / Payment / Custody
+
+Нельзя считать, что USDC settlement является юридически нейтральным.
+
+Юрист должен ответить:
+
+- считается ли USDC settlement between OX and operator payment service;
+- может ли OX считаться VASP;
+- влияет ли smart contract custody / non-custody на анализ;
+- кто является custodian, если средства locked in TreasuryVault, OperatorVault или operator-controlled escrow;
+- нужно ли делать source of funds check operator wallets;
+- нужно ли делать sanctions screening operator wallets;
+- что меняется, если игрок покупает ticket напрямую через wallet;
+- какая fee model меньше повышает co-operator/VASP/payment risk.
+
+Предварительная внутренняя позиция:
+
+```text
+Для первого pilot предпочтительно работать через operator wallets / operator settlement, а не массово принимать wallets конечных игроков, пока не закрыт VASP/payment analysis.
+```
+
+## 10. Smart contracts and custody
+
+Юристу нужно показать:
+
+- TreasuryVault;
+- OperatorVault / OperatorEscrow;
+- TicketVault;
+- ResultRegistry;
+- PayoutVault;
+- payoutRoot/refundRoot;
+- emergency pause;
+- multisig powers;
+- non-upgradeable / migration policy;
+- claim window;
+- refund path;
+- unclaimed payout treatment.
+
+Ключевой вопрос:
+
+```text
+Считаются ли средства в smart contracts средствами игроков, оператора или OX, и кто юридически является custodian?
+```
+
+Нужно избежать:
+
+- admin права произвольно выводить user funds;
+- pauser powers без процедуры;
+- upgradeability без migration policy;
+- result/payoutRoot replacement без audit/evidence/timelock;
+- executor, который может менять смысл выплат.
+
+## 11. Operator agreement: обязательные условия
+
+Договор с оператором должен покрывать:
+
+- operator of record representation;
+- подтверждение лицензии;
+- подтверждение права предлагать jackpot/toto/pool betting;
+- список разрешённых стран;
+- restricted countries;
+- KYC/AML obligations;
+- responsible gaming;
+- payment/tax obligations;
+- player support;
+- payout SLA;
+- reconciliation report по каждому draw;
+- право OX отключить оператора за невыплату игрокам;
+- право OX отключить оператора за подмену ticket data;
+- право OX отключить оператора за отказ от reconciliation;
+- incident response;
+- dispute handling;
+- data processing;
+- confidentiality;
+- public disclosure rules при dispute/non-payment;
+- audit rights;
+- termination.
+
+Главный вопрос:
+
+```text
+Кто отвечает перед игроком, если OX перевёл сумму оператору, а оператор не выплатил игроку?
+```
+
+## 12. Restricted countries and marketing
+
+До legal memo OX не должен:
+
+- таргетировать США;
+- таргетировать UK;
+- таргетировать NL/France/другие чувствительные regulated markets;
+- писать, что продукт доступен "всем";
+- полагаться только на оператора без собственной technical geo/access policy;
+- давать affiliate marketing без compliance approval.
+
+Нужны:
+
+- restricted markets memo;
+- frontend/API/quote geo-blocking policy;
+- partner traffic rules;
+- affiliate compliance rules;
+- responsible gaming disclosures;
+- country-specific legal review for pilots.
+
+## 13. Что нужно добавить / держать в проекте OX
+
+Финальный legal work package:
+
+1. Legal Role Memo:
+   supplier-only / B2B supplier / co-operator / direct operator.
+2. Jurisdiction Recommendation Memo:
+   Curaçao vs Anjouan vs alternative.
+3. UAE Entity Risk Note:
+   holding/tech/IP only vs gaming facilitation.
+4. Operator Contract Term Sheet:
+   operator of record, payout SLA, reconciliation, dispute.
+5. PoolScope Legal Matrix:
+   operatorPool / countryPool / licensePool first; globalPool only after legal approval.
+6. USDC/VASP/Payment Memo:
+   custody, settlement, AML, sanctions, source of funds.
+7. Data & Privacy Memo:
+   playerHash, ticketHash, DPA, logs, disclosure.
+8. Restricted Markets Memo:
+   no-go countries and geo/access blocking.
+9. Smart Contract Custody Memo:
+   TreasuryVault, OperatorVault, PayoutVault, pause, multisig, migration.
+10. First Pilot Legal Checklist:
+   what must be ready before first commercial draw.
+
+## 14. Вопросы юристу
+
+### 14.1. Главный вопрос
+
+```text
+Может ли OX в выбранной модели быть supplier / B2B technology provider / settlement-proof infrastructure для operator-of-record, не становясь gambling operator или co-operator?
+
+Если нет, какая лицензия, структура, fee model и operational boundary нужны?
+```
+
+### 14.2. Роль OX
+
+1. В каких условиях OX считается pure software supplier?
+2. В каких условиях OX считается B2B gaming supplier?
+3. В каких условиях OX становится co-operator / jackpot operator?
+4. Влияет ли на статус OX управление draw, resultRoot, payoutRoot, jackpot logic и smart contracts?
+5. Может ли OX получать процент от handle/GGR и оставаться supplier-only?
+6. Какая fee model юридически безопаснее: fixed SaaS fee, setup fee, per-ticket tech fee, revenue share, hybrid?
+7. Какие действия OX нужно исключить, чтобы не стать operator of record?
+8. Нужна ли OX собственная B2B/supplier license при работе только через лицензированных операторов?
+
+### 14.3. Лицензии и юрисдикции
+
+1. Какая юрисдикция лучше для первого пилота: Curaçao, Anjouan или другая?
+2. Нужна ли OX supplier license в Curaçao?
+3. Нужна ли OX B2B/B2C license в Anjouan?
+4. Можно ли использовать UAE holding/tech/IP entity без GCGRA risk?
+5. Где должны находиться server operations, management, treasury, IP and contracting entity?
+6. Какие страны сразу исключить из MVP и пилотов?
+
+### 14.4. Оператор и договор
+
+1. Кто operator of record перед игроком?
+2. Достаточно ли лицензии оператора для запуска OX внутри его платформы?
+3. Должен ли оператор подтверждать, что его лицензия покрывает jackpot/toto/pool betting?
+4. Какие warranties нужны от оператора?
+5. Кто отвечает, если оператор не выплатил игроку?
+6. Можно ли публично раскрывать non-payment/dispute status?
+7. Какие payout SLA обязательны?
+
+### 14.5. USDC / VASP / Payment
+
+1. Считается ли USDC settlement платежной услугой?
+2. Может ли OX считаться VASP?
+3. Кто custodian средств в smart contract?
+4. Нужно ли проверять source of funds operator wallets?
+5. Можно ли принимать только operator wallets?
+6. Что меняется при direct player wallet purchase?
+
+### 14.6. Pool structure
+
+1. Можно ли делать globalPool?
+2. Если globalPool нельзя, можно ли делать operatorPool/countryPool/licensePool?
+3. Можно ли смешивать средства игроков из разных лицензий/стран?
+4. Кто владеет jackpot reserve?
+5. Как оформлять rollover, refund, void draw, unclaimed payouts?
+
+### 14.7. KYC / AML / Players
+
+1. Может ли KYC полностью оставаться у оператора?
+2. Нужен ли OX KYC-status без PII?
+3. Какие thresholds для KYC/EDD?
+4. Можно ли использовать playerHash?
+5. Что делать при крупном выигрыше?
+6. Как запретить hidden payout refusal under KYC?
+7. Как оформлять blocked payout and reissueRoot?
+
+### 14.8. Data / Privacy
+
+1. Кто controller и processor?
+2. Нужен ли DPA?
+3. Считается ли playerHash personal data?
+4. Можно ли хранить operatorId/jurisdictionId/playerHash/ticketHash on-chain?
+5. Какие retention periods нужны для manifests/proofs/audit logs?
+
+### 14.9. Smart contracts
+
+1. Какие admin/multisig powers допустимы?
+2. Как описать emergency pause?
+3. Как описать non-upgradeable MVP and migration policy?
+4. Какие disclaimers нужны по oracle/manual fallback/appeal window?
+5. Как оформлять incident report при resultRoot/payoutRoot ошибке?
+
+### 14.10. Marketing / Restricted countries
+
+1. Может ли OX рекламироваться напрямую игрокам?
+2. Кто отвечает за affiliate marketing?
+3. Какие страны no-go?
+4. Нужна ли geo-blocking policy на frontend/API/quote?
+5. Можно ли публиковать payout history без признания direct player-facing operation?
+
+## 15. План следующих 30 дней
+
+| Период | Действие | Результат |
+|---|---|---|
+| Дни 1-3 | Собрать legal brief, схемы ролей, B2B/B2B2C model, architecture summary, operator shortlist | Материал для первичной консультации |
+| Дни 4-7 | Провести 2-3 консультации с iGaming/crypto/VASP юристами | Понять роль OX и красные зоны |
+| Дни 7-14 | Получить initial legal role memo + jurisdiction direction | Решить supplier-only / B2B supplier / co-operator risk |
+| Дни 14-21 | Подготовить operator due diligence template и exploratory outreach | Проверить требования операторов |
+| Дни 21-30 | Выбрать first pilot legal structure and pilot model | Решение: supplier license / under partner license / менять стратегию |
+
+Важно:
+
+```text
+Discovery calls с операторами до legal memo должны быть exploratory, а не обещанием запуска.
+```
+
+## 16. Финальный ориентир
+
+Главная цель ближайшего юридического этапа:
+
+```text
+не получить любую offshore-лицензию,
+а доказать правильную роль OX в цепочке:
+supplier / B2B supplier / co-operator / direct operator.
+```
+
+Если юрист подтверждает, что OX может быть supplier / settlement-proof layer under operator-of-record, стратегия остаётся реалистичной.
+
+Если юрист подтверждает co-operator risk, нужно сразу считать:
+
+- стоимость лицензии;
+- сроки;
+- требования к entity;
+- AML/compliance;
+- tax;
+- reporting;
+- technical audit;
+- operator contract changes.
+
+Первый коммерческий proof case должен быть:
+
+```text
+один оператор
+-> один operatorPool / licensePool
+-> один draw
+-> resultRoot
+-> payoutRoot / refundRoot
+-> payout
+-> reconciliation
+-> public payout history.
+```
+
+## 17. Источники проверки
+
+- Curaçao Gaming Authority portal: https://portal.cga.cw/
+- Curaçao Gaming Authority: https://www.cga.cw/
+- Anjouan Gaming: https://anjouangaming.com/
+- Anjouan Gaming licensing: https://anjouangaming.com/licensing/
+- Anjouan licence types: https://anjouangaming.com/licensing/licence-types/
+- UAE GCGRA: https://www.gcgra.gov.ae/en/
+- UAE GCGRA licensing: https://www.gcgra.gov.ae/en/licensing/
+- Внутренние документы OX: B2B/B2B2C strategic stage, strategy localization, first operator shortlist, canonical MVP architecture, compliance/KYC decisions.
