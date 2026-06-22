@@ -16,6 +16,22 @@
 
 Если этот документ конфликтует с более ранними формулировками, для MVP приоритет имеет этот документ.
 
+Уточнение после анализа обновленного `CryptoGamp`:
+
+```text
+OX MVP остается продуктом на 15 событий.
+CryptoGamp/OX-16 может использоваться только как источник отдельных operational practices и как возможный premium/post-MVP вариант.
+16 событий, GLOBAL_POOL as MVP default, 3 USDC minimum stake, 2-of-2 governance и ExpressCore-style monolith не меняют канон OX MVP.
+```
+
+Уточнение по security roadmap:
+
+```text
+MVP включает обязательный compact security core.
+AI security swarm, HSM/MPC, public bug bounty, security council, hybrid post-quantum signatures и full formal verification не являются обязательными задачами MVP.
+Если первый pilot идет через B2B/B2B2C оператора, OperatorVault / operator-controlled escrow становится частью pilot security boundary.
+```
+
 Главное решение:
 
 ```text
@@ -229,6 +245,14 @@ Executor не имеет права:
 - обходить KYC/compliance;
 - использовать prizePool или jackpot для оплаты gas;
 - хранить приватный ключ в открытом виде.
+
+Operational rule:
+
+```text
+Executor outage, gas spike, RPC degradation, queue backlog или sponsor-tx failure не являются ошибкой payoutRoot и не являются основанием автоматически включать refundRoot, если settlement basis корректен.
+```
+
+Если корректный `payoutRoot` активирован, но automatic executor не доставил выплату в течение технического окна, система обязана открыть пользователю `manual claim` fallback и сохранить payout right.
 
 Manual fallback:
 
@@ -566,6 +590,12 @@ Post-MVP модули:
 - PartnerPayoutVault;
 - Governance module;
 - Token module;
+
+Security modules by stage:
+
+- MVP: compact security core, external audit/security review, key management, basic monitoring, incident checklist;
+- B2B pilot: OperatorVault / operator-controlled escrow, operator-specific pause, operator reconciliation;
+- full launch: HSM/MPC, AI monitoring, public bug bounty, formal verification, security council and continuous security program.
 - Upgrade manager.
 
 ---
@@ -589,6 +619,22 @@ Backend API обязан одинаково обслуживать frontend, adm
 | GET /payouts/{ticketId}/proof | Merkle proof для claim/claimFor |
 | GET /executor/status | executor state, gas state, queue lag |
 | GET /payouts/{ticketId}/status | payout status, txHash, retries |
+
+Канонические claimability/payout status names для API, UI, executor и support:
+
+```text
+not-ready
+executor-auto
+user-manual
+refund
+already-claimed
+blocked-compliance
+manual-review
+expired
+reissued
+```
+
+`BlockedKYC` не является каноническим публичным статусом OX MVP. Если KYC/eligibility нужен, он должен проверяться до risk entry / signed quote. Post-win блокировка допустима только как редкий compliance/legal/AML/sanctions hold и снаружи маппится в `blocked-compliance` или `manual-review`.
 
 B2B/B2B2C compatibility endpoints:
 
@@ -680,6 +726,7 @@ Post-MVP:
 - полноценный RevShare;
 - токен OX;
 - DEX/listing/token;
+- AI security monitoring, HSM/MPC, public bug bounty, formal verification, security council and post-quantum roadmap только как full-launch / mature-network security layer, не как MVP requirement;
 - high-stakes mode;
 - public bug bounty;
 - мобильные приложения;

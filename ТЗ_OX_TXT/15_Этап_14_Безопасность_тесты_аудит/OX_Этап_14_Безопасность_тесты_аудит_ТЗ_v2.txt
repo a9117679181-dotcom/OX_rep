@@ -35,6 +35,16 @@
 
 Не принимаем как обязательное для MVP требование двух независимых аудитов. Для MVP обязательный минимум: один внешний аудит, исправление critical/high findings и remediation review (повторная проверка исправлений).
 
+После согласования поэтапной security-модели дополнительно фиксируем:
+
+```text
+MVP security = compact security core.
+Full-launch security = отдельный слой масштабирования.
+AI security swarm, HSM/MPC, public bug bounty, security council, hybrid post-quantum signatures и full formal verification не являются обязательными условиями MVP.
+```
+
+Если первый commercial pilot запускается через B2B/B2B2C оператора, OperatorVault / operator-controlled escrow, operator-specific pause и operator reconciliation должны рассматриваться как часть pilot security boundary, а не как поздняя опция.
+
 ---
 
 ## 2. Базовое решение
@@ -512,11 +522,15 @@ Fuzz tests должны покрывать:
 - audit log имеет actorId, role, actionType, entityType, entityId, reasonCode, timestamp;
 - oldValueHash/newValueHash сохраняются для изменений настроек;
 - evidenceLink/evidenceHash обязательны для manual fallback;
+- sensitive flow evidence содержит actor, role, timestamp, affected draw/root/version, reasonCode, selected remediation path и approvals;
+- final evidence bundle нельзя silently overwrite или удалить без нового audit event;
 - txHash сохраняется для on-chain действий;
 - audit log нельзя удалить через admin API;
 - audit log нельзя изменить через admin API;
 - audit log export работает для аудитора;
 - срок хранения минимум 5 лет, если юристы не установят другой срок;
+- целевой срок хранения manifests/proofs/audit logs - 10 лет, если юристы не установят более строгий или более короткий режим;
+- public payout history хранится максимально долго как proof/marketing archive без персональных данных;
 - backup audit logs восстанавливается.
 
 ---
@@ -853,6 +867,9 @@ Testnet dry run должен пройти полный цикл:
 - database corruption;
 - proof lost;
 - mass payout failure;
+- executor outage / gas spike / RPC degradation / queue backlog;
+- active payoutRoot error before first claim;
+- active payoutRoot error after at least one claim;
 - sanctions/AML emergency;
 - data leak.
 
@@ -866,6 +883,14 @@ Testnet dry run должен пройти полный цикл:
 - evidence collection;
 - recovery plan;
 - postmortem.
+
+Канонические incident rules:
+
+- executor outage, gas spike, RPC degradation, queue backlog или sponsor-tx failure не являются ошибкой payoutRoot, если settlement basis корректен;
+- при delivery-layer incident открывается manual claim fallback, а не автоматический refundRoot;
+- если root уже активен, но claims еще не было, replacement допускается только через pause, evidence, reasonCode и multisig approval;
+- если root уже использован, прошлое не переписывается, а применяется compensatingRoot / reissueRoot / отдельный incident path;
+- already-paid leaves не переписываются назад как будто выплаты не было.
 
 Если инцидент затрагивает пользовательские средства, персональные данные или юридически значимые ограничения, заранее должны быть подготовлены:
 
@@ -1017,6 +1042,11 @@ Key management policy должна отдельно описывать:
 | 14 | Multisig keys должны храниться у разных лиц. | Согласовать | Иначе multisig превращается в формальность. |
 | 15 | Merkle proofs и payout manifests должны иметь cold backup. | Согласовать | Без proof нельзя доказать право на выплату. |
 | 16 | Public bug bounty запускается только после утверждения scope и reward rules. | Согласовать | Иначе triage станет хаотичным. |
+| 17 | Executor outage не является payoutRoot error. | Согласовать | При корректном settlement открываем manual claim, а не refundRoot. |
+| 18 | Active root remediation зависит от того, были ли claims. | Согласовать | До первого claim возможен governed replacement; после claims только corrective path. |
+| 19 | Public payout history хранится максимально долго. | Согласовать | Это proof/marketing asset OX без персональных данных. |
+| 20 | MVP не включает enterprise-heavy security stack. | Согласовать | AI/HSM/public bounty/security council/full formal verification идут после proof case. |
+| 21 | B2B pilot требует operator-specific security boundary. | Согласовать условно | Если пилот идет через оператора, нужен OperatorVault/escrow, operator pause и reconciliation. |
 
 ---
 
@@ -1033,6 +1063,9 @@ Key management policy должна отдельно описывать:
 - описаны oracle tests;
 - описаны settlement/payout tests;
 - описаны admin/RBAC/multisig tests;
+- описаны evidence retention and final evidence bundle tests;
+- описаны executor outage / gas incident сценарии;
+- описан resultRoot/payoutRoot remediation path до первого claim и после claims;
 - описаны audit log tests;
 - описаны monitoring and alert tests;
 - описаны backup/restore tests;
@@ -1041,6 +1074,8 @@ Key management policy должна отдельно описывать:
 - описан testnet dry run;
 - описан incident response;
 - описан bug bounty/private review подход;
+- зафиксирована поэтапная security roadmap: MVP core, B2B pilot extension, full launch security;
+- enterprise-heavy security элементы вынесены за рамки MVP;
 - зафиксированы решения для согласования;
 - зафиксированы открытые вопросы.
 

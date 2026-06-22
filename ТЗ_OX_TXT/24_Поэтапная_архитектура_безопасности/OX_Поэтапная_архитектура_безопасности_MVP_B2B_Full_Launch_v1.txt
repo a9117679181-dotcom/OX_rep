@@ -1,0 +1,736 @@
+# OX - поэтапная архитектура безопасности
+
+Дата: 22.06.2026
+Версия: v1
+Статус: финализированная рабочая модель для включения в ТЗ OX
+Проект: OX / Onchain Express
+Стартовый продукт MVP: Суперэкспресс 15
+Сеть MVP: Base
+Валюта MVP: USDC
+
+---
+
+## 1. Назначение документа
+
+Этот документ фиксирует поэтапную модель безопасности OX.
+
+Главная задача - найти баланс:
+
+```text
+MVP должен быть безопасным, проверяемым и управляемым,
+но не должен превращаться в дорогую enterprise-платформу до первого proof case.
+```
+
+Безопасность OX строится поэтапно:
+
+1. MVP / controlled pilot - компактное обязательное security core.
+2. B2B/B2B2C pilot - операторский custody/security контур, если пилот идет через оператора.
+3. Post-MVP stabilization - усиление после первых реальных выплат.
+4. Full launch - масштабирование на нескольких операторов и больший TVL.
+5. Mature network - институциональная и долгосрочная security-программа.
+
+Если этот документ конфликтует с канонической архитектурой MVP, приоритет имеет:
+
+1. `OX_Каноническая_архитектура_MVP_ТЗ_v1`;
+2. юридико-стратегическая модель OX;
+3. этап 14 "Безопасность, тесты, аудит";
+4. этот документ.
+
+---
+
+## 2. Ключевой вывод
+
+OX не должен начинать с тяжелой security-инфраструктуры:
+
+- AI security swarm;
+- HSM/MPC для всех ключей;
+- public bug bounty;
+- security council;
+- hybrid post-quantum signatures;
+- полноценная formal verification всех контрактов;
+- большой operator security dashboard.
+
+Это правильные направления, но не задачи первого запуска.
+
+Для MVP нужен другой принцип:
+
+```text
+Минимум людей, минимум ручных действий, максимум проверяемости денег, результатов и выплат.
+```
+
+MVP должен защитить:
+
+- пользовательские средства;
+- правила тиража;
+- покупку билета;
+- спортивные результаты;
+- resultRoot;
+- payoutRoot/refundRoot;
+- claim/claimFor;
+- audit log;
+- ключи и роли;
+- аварийную остановку без права произвольного вывода средств.
+
+---
+
+## 3. Этап 1. MVP / controlled pilot
+
+### 3.1. Цель этапа
+
+Безопасно запустить ограниченный продукт OX-15 с проверяемыми выплатами и без лишней операционной тяжести.
+
+MVP не должен требовать большую постоянную security-команду. На этом этапе достаточно компактной команды разработки/операций и внешней независимой проверки.
+
+### 3.2. Что внедряем обязательно
+
+| Блок | Статус MVP | Комментарий |
+|---|---|---|
+| Non-upgradeable core contracts | Обязательно | Core logic нельзя переписать задним числом. |
+| Multisig 2 из 3 | Обязательно | Для действий, влияющих на деньги, роли, root и emergency correction. |
+| Role separation | Обязательно | Executor, result publisher, root publisher, admin и pauser не должны быть одним ключом. |
+| Simple review windows | Обязательно | Окно проверки результата и payoutRoot без чрезмерных задержек. |
+| Simple emergency pause | Обязательно | BUY_PAUSE, RESULT_PAUSE, CLAIM_PAUSE, FULL_PAUSE. |
+| EIP-712 signed quote | Обязательно | Защита цены, лимитов, poolScope, operatorId и replay. |
+| Basic anti-whale engine | Обязательно | Проверка лимитов до signed quote. |
+| Independent result verification | Обязательно, но упрощенно | MVP: primary provider + минимум 1 backup provider + manual evidence fallback. |
+| resultRoot / resultManifestHash | Обязательно | Финальный результат должен быть проверяемым. |
+| payoutRoot / refundRoot | Обязательно | Выплаты и возвраты должны идти через проверяемые roots. |
+| Merkle claim | Обязательно | Проверяемое право на выплату без тяжелых on-chain таблиц. |
+| Limited executor | Обязательно | Executor только вызывает claimFor и не имеет root/admin/result прав. |
+| Manual claim fallback | Обязательно | Пользователь не зависит только от automatic executor. |
+| Critical invariant/fuzz tests | Обязательно | Только критические инварианты, без перегруза full formal verification. |
+| External audit / security review | Обязательно перед real funds | Один внешний аудит или независимая security review + remediation review. |
+| Key management policy | Обязательно | Hardware wallets, разделение ключей, запрет seed/private keys в cloud/Git. |
+| Basic monitoring alerts | Обязательно | On-chain events, payoutRoot, executor, result mismatch, admin actions. |
+| Incident response checklist | Обязательно | Не тяжелая программа, а понятный runbook действий. |
+| Security & Transparency page | Обязательно | Простая пользовательская страница доверия без технической перегрузки. |
+
+### 3.3. Non-upgradeable core contracts
+
+Для MVP базовое решение:
+
+```text
+Core contracts = non-upgradeable.
+Новые версии = через migration, а не через скрытую замену логики.
+```
+
+Это усиливает доверие:
+
+- правила не меняются задним числом;
+- пользователь и оператор видят границы контракта;
+- аудит проще;
+- риск admin abuse ниже.
+
+Migration допускается только:
+
+- через multisig 2 из 3;
+- с публичным reasonCode;
+- с audit log;
+- с migration notice;
+- без принудительного вывода пользовательских средств администратором.
+
+### 3.4. Multisig 2 из 3
+
+Для MVP критические действия требуют multisig 2 из 3:
+
+- финализация спорного результата;
+- активация payoutRoot/refundRoot;
+- emergency correction;
+- смена критических ролей;
+- emergency unpause после серьезного инцидента;
+- migration;
+- reissueRoot / compensatingRoot, если действие влияет на деньги.
+
+Multisig не должен быть формальностью:
+
+- ключи хранятся у разных лиц;
+- нельзя держать все signer keys у одного человека;
+- executor key не является multisig signer key;
+- backend key не является admin key.
+
+### 3.5. Simple review windows
+
+Для MVP нужны только понятные окна проверки:
+
+- окно проверки результата;
+- техническое окно проверки payoutRoot;
+- ручное подтверждение при спорном результате;
+- delay перед migration.
+
+Не нужно превращать MVP в медленную систему с длинными задержками. Окна проверки должны защищать от ошибок, но не ломать пользовательское ожидание быстрых выплат.
+
+### 3.6. Simple emergency pause
+
+Для MVP достаточно четырех режимов:
+
+| Режим | Что останавливает |
+|---|---|
+| BUY_PAUSE | покупку билетов |
+| RESULT_PAUSE | публикацию/финализацию результата |
+| CLAIM_PAUSE | claim/claimFor |
+| FULL_PAUSE | полный аварийный режим |
+
+Pause не дает право:
+
+- менять правила открытого тиража;
+- менять результат без процедуры;
+- переписать payoutRoot без evidence;
+- вывести пользовательские средства;
+- забрать jackpot/prize pool.
+
+### 3.7. Signed quote
+
+Покупка билета должна идти через подписанный quote.
+
+Минимальный quote payload:
+
+- drawId;
+- wallet;
+- ticketHash;
+- lineCount;
+- ticketPrice;
+- comboPrice;
+- poolScope;
+- operatorId или DIRECT_OX;
+- jurisdictionId, если применимо;
+- licenseScope, если применимо;
+- expiry;
+- quoteId;
+- signer;
+- signatureScheme;
+- signerSetVersion.
+
+Это защищает:
+
+- цену;
+- лимиты;
+- anti-whale;
+- poolScope;
+- operator attribution;
+- replay;
+- unauthorized purchase.
+
+### 3.8. Basic anti-whale engine
+
+Для MVP anti-whale должен быть практичным, а не чрезмерно сложным.
+
+Проверять до quote:
+
+- maximum combinations per ticket;
+- maximum ticket amount;
+- maximum wallet amount per draw;
+- maximum wallet combinations per draw;
+- jackpot exposure;
+- proximity to excessive coverage;
+- velocity / повторные покупки;
+- country/operator/pool limits.
+
+Если лимит частично исчерпан, backend должен вернуть:
+
+- allowed = false или reduced allowed amount;
+- reasonCode;
+- remainingLimit;
+- user-facing warning.
+
+### 3.9. Independent result verification
+
+Полная модель `primary + backup 1 + backup 2` хороша как целевой стандарт.
+
+Для MVP допускается более легкая модель:
+
+```text
+1 primary sports data provider
++ минимум 1 backup provider
++ manual evidence fallback
++ audit log / evidenceHash
++ multisig/review для спорных случаев.
+```
+
+Целевой стандарт после пилота:
+
+```text
+primary provider + backup 1 + backup 2 + consensus/tie-break rule.
+```
+
+Это снижает нагрузку на MVP, но не оставляет OX зависимым от одного источника данных без fallback.
+
+### 3.10. Merkle payout model
+
+MVP обязан использовать:
+
+- payout manifest;
+- refund manifest;
+- payoutRoot;
+- refundRoot;
+- Merkle proof;
+- claimed bitmap;
+- claim;
+- claimFor;
+- manual claim fallback.
+
+Executor не должен формировать payout сам. Он только исполняет уже опубликованное право.
+
+### 3.11. Hardened Merkle leaf
+
+Минимальная leaf-структура MVP:
+
+```text
+leaf = hash(
+  chainId,
+  contractAddress,
+  drawId,
+  resultVersion,
+  payoutRootVersion,
+  leafIndex,
+  recipient,
+  ticketId,
+  payoutType,
+  asset,
+  amount,
+  claimDeadline
+)
+```
+
+Для B2B-ready режима добавляются:
+
+- poolScope;
+- poolId;
+- operatorIdHash;
+- jurisdictionIdHash;
+- licenseScopeHash.
+
+Такой leaf нельзя использовать:
+
+- в другой сети;
+- в другом контракте;
+- в другом draw;
+- для другого получателя;
+- после claimDeadline;
+- для другого payoutRootVersion.
+
+### 3.12. Limited executor
+
+Executor может:
+
+- читать очередь claimable payouts;
+- получать proof через backend proof API;
+- сверять proof с chain state;
+- проверять claimed state;
+- проверять gas reserve / executor wallet;
+- вызывать claimFor;
+- писать txHash и execution status;
+- поднимать alert.
+
+Executor не может:
+
+- публиковать resultRoot;
+- публиковать payoutRoot;
+- активировать root;
+- менять сумму;
+- менять recipient;
+- обходить compliance block;
+- выводить funds;
+- иметь admin/root/result права.
+
+### 3.13. Manual claim fallback
+
+Если executor не сработал, пользователь должен иметь возможность забрать выплату сам.
+
+Правило:
+
+```text
+Executor outage, gas spike, RPC degradation, queue backlog или sponsor-tx failure не являются payoutRoot error.
+Если settlement basis корректен, открывается manual claim fallback, а не automatic refund.
+```
+
+### 3.14. Critical invariant/fuzz tests
+
+В MVP обязательны только критические инварианты:
+
+- noDoubleClaim;
+- payoutRootTotal <= availableFunds;
+- refundTotal <= refundableAmount;
+- admin cannot withdraw user funds;
+- executor cannot change recipient;
+- claimFor sends only to recipient;
+- payout cannot start before result finalization and root activation;
+- paused claim path blocks claim/claimFor;
+- blocked-compliance payout cannot be claimed until unblock/reissue path.
+
+Полная formal verification переносится на поздний этап.
+
+### 3.15. External audit / security review
+
+Перед mainnet с real funds нужен внешний audit/security review.
+
+Минимум MVP:
+
+- один внешний smart contract audit или независимая security review;
+- проверка payout/root/claim logic;
+- remediation по critical/high findings;
+- remediation review;
+- formal risk acceptance, если high finding не исправлен.
+
+Запуск запрещен, если:
+
+- есть unresolved critical finding;
+- есть unresolved high finding без formal risk acceptance;
+- нет проверенного multisig;
+- нет tested pause;
+- нет tested claim/refund path;
+- нет backup manifests/proofs.
+
+### 3.16. Key management policy
+
+MVP-правила:
+
+- hardware wallets для multisig signers;
+- no seed phrases in cloud;
+- no private keys in GitHub;
+- no admin keys in backend;
+- отдельный executor key;
+- отдельные result/root/admin keys;
+- signer rotation procedure;
+- compromised key procedure;
+- monthly access review.
+
+HSM/MPC не требуется для MVP, если TVL и operator requirements еще не требуют институционального custody.
+
+### 3.17. Basic monitoring
+
+MVP monitoring:
+
+- on-chain event monitor;
+- payoutRoot monitor;
+- executor failure monitor;
+- executor wallet balance monitor;
+- result mismatch monitor;
+- admin action monitor;
+- dependency/security alert monitor;
+- audit log write failure monitor.
+
+AI monitoring не требуется для MVP.
+
+### 3.18. Incident response checklist
+
+MVP должен иметь простой checklist:
+
+- incident type;
+- severity;
+- owner;
+- affected draw/root/version;
+- immediate pause decision;
+- evidence collection;
+- user/operator communication;
+- recovery path;
+- postmortem.
+
+Это не должна быть тяжелая enterprise-программа, но команда должна знать, что делать при:
+
+- wrong resultRoot;
+- wrong payoutRoot before claim;
+- wrong payoutRoot after claim;
+- executor outage;
+- oracle mismatch;
+- admin key compromise;
+- proof loss;
+- mass payout failure.
+
+### 3.19. Security & Transparency page
+
+На MVP нужна простая страница:
+
+- как фиксируются правила тиража;
+- как проверяются результаты;
+- что такое payoutRoot;
+- как пользователь проверяет выплату;
+- что делает multisig;
+- что делает emergency pause;
+- где смотреть audit/security status;
+- как работает manual claim fallback.
+
+Пользователь не должен видеть перегруженные термины вроде HSM, MPC, post-quantum или formal verification.
+
+---
+
+## 4. Условный блок: B2B/B2B2C pilot
+
+Этот блок включается не всегда.
+
+Правило:
+
+```text
+Если MVP запускается как Direct OX crypto pilot, используется TreasuryVault.
+Если первый pilot запускается через лицензированного оператора, OperatorVault / operator-controlled escrow должен быть частью пилота.
+```
+
+### 4.1. Что нужно для B2B-пилота
+
+Если есть оператор:
+
+- operatorId;
+- operatorOfRecord;
+- jurisdictionId;
+- licenseScope;
+- poolScope;
+- operator wallet / operator settlement reference;
+- operator reconciliation report;
+- operator-specific pause;
+- operator-specific limits;
+- operator incident contact;
+- operator access boundaries.
+
+### 4.2. Почему это важно
+
+Для B2B/B2B2C юридической модели OX не должен выглядеть как прямой player-facing operator во всех странах.
+
+OperatorVault / operator-controlled escrow помогает удерживать позицию:
+
+```text
+OX = settlement-proof infrastructure supplier.
+Лицензированный оператор = operator of record перед игроком.
+```
+
+### 4.3. Что не нужно для первого B2B-пилота
+
+Не требуется сразу:
+
+- полноценный operator dashboard;
+- AI operator reconciliation agent;
+- HSM/MPC для всех operator keys;
+- public operator security portal;
+- complex SLA automation;
+- multi-operator global routing.
+
+Достаточно:
+
+- internal operator registry;
+- reconciliation report;
+- operator pause;
+- audit log;
+- signed quote fields;
+- clear support/escalation path.
+
+---
+
+## 5. Этап 2. Post-MVP stabilization
+
+Этап начинается после первого controlled pilot и первых реальных выплат.
+
+Добавляем:
+
+1. Расширенный pause:
+   - ROOT_PAUSE;
+   - EXECUTOR_PAUSE;
+   - OPERATOR_PAUSE, если есть операторы.
+2. Расширенная crypto-agility:
+   - новые signatureScheme;
+   - signerSetVersion history;
+   - manifestVersion history.
+3. Полный manifest versioning:
+   - backward compatibility;
+   - manifest schema registry;
+   - old root verification.
+4. Улучшенный anti-whale engine:
+   - concentration;
+   - pool-level exposure;
+   - operator-level exposure;
+   - cross-draw velocity.
+5. Settlement recalculation tool:
+   - независимая сверка payout manifest;
+   - audit mode;
+   - no direct money movement.
+6. Private bug bounty / закрытая security review:
+   - после первого audit и remediation.
+7. Улучшенная admin panel:
+   - security status;
+   - root lifecycle;
+   - executor state;
+   - incident state;
+   - evidence bundles.
+8. Первый operator security mode:
+   - если есть операторская интеграция.
+
+---
+
+## 6. Этап 3. Full launch
+
+Этап нужен при росте:
+
+- нескольких операторов;
+- большого TVL;
+- больших jackpot;
+- публичных proof pages;
+- нескольких юрисдикций;
+- более высоких требований инвесторов и операторов.
+
+Добавляем:
+
+1. OperatorVault / operator-controlled escrow на нескольких операторов.
+2. Operator security dashboard.
+3. AI security monitoring agents.
+4. Security agent audit trail.
+5. Limited auto-pause.
+6. HSM/MPC/institutional custody.
+7. Public bug bounty.
+8. Formal verification для critical contracts.
+9. Independent oracle attestation layer.
+10. Hybrid post-quantum signatures для off-chain documents.
+11. Security council.
+12. Continuous security program.
+
+### 6.1. AI monitoring
+
+AI может помогать:
+
+- находить аномалии;
+- сверять settlement;
+- отслеживать oracle mismatch;
+- анализировать whale/risk patterns;
+- искать dependency/CVE risks;
+- поднимать alerts.
+
+AI не может:
+
+- двигать funds;
+- активировать payoutRoot;
+- менять результат;
+- открывать payout path;
+- снимать compliance block;
+- принимать финальные финансовые решения.
+
+### 6.2. Limited auto-pause
+
+Auto-pause допускается только после тестирования.
+
+Ограничения:
+
+- только конкретная зона;
+- no fund movement;
+- no root activation;
+- mandatory human review;
+- audit log;
+- postmortem при critical incident.
+
+### 6.3. HSM/MPC
+
+HSM/MPC подключаются при росте TVL, jackpot или operator requirements.
+
+Для MVP это не требуется.
+
+### 6.4. Formal verification
+
+Formal verification не является обязательным MVP-требованием.
+
+Она становится уместной для:
+
+- PayoutVault;
+- TreasuryVault / OperatorVault;
+- claim/refund logic;
+- noDoubleClaim;
+- admin cannot withdraw user funds;
+- root replacement constraints.
+
+---
+
+## 7. Этап 4. Mature network / стратегическая дорожная карта
+
+Это не задачи MVP и не условия первого запуска.
+
+Долгосрочно можно развивать:
+
+- полный AI Security Swarm;
+- HSM/MPC для всех critical keys;
+- annual audit program;
+- security council with independent signer;
+- post-quantum migration research;
+- hybrid signatures для архивов;
+- independent oracle attestation network;
+- advanced operator dashboard;
+- continuous security program.
+
+Эти элементы показывают направление развития, но не должны раздувать первый релиз.
+
+---
+
+## 8. Оценка команды и операционной нагрузки
+
+### 8.1. MVP / controlled pilot
+
+Ориентир:
+
+- 2-3 backend/smart-contract engineers;
+- 1 frontend engineer;
+- 1 DevOps/infrastructure engineer;
+- 1 product/security owner;
+- внешний smart contract auditor / security reviewer;
+- part-time legal/compliance support.
+
+Итого: примерно 5-8 core people + внешние специалисты.
+
+### 8.2. B2B pilot
+
+Ориентир:
+
+- 8-12 человек с учетом operator integration, support, DevOps, compliance coordination и monitoring.
+
+### 8.3. Full launch
+
+Ориентир:
+
+- 15-25 человек core/ops/security/product/compliance;
+- часть функций через внешних провайдеров:
+  - audit;
+  - legal;
+  - custody;
+  - monitoring;
+  - bug bounty;
+  - compliance tools.
+
+### 8.4. Что нельзя делать
+
+Не нужно строить 100-человеческую команду до proof case.
+
+Штат раздуется только если OX одновременно начнет делать внутри:
+
+- собственный AI monitoring platform;
+- собственную custody-инфраструктуру;
+- собственный oracle network;
+- собственный compliance department во всех странах;
+- круглосуточный enterprise support для многих операторов;
+- full formal verification всего ядра до pilot.
+
+Это не требуется для MVP.
+
+---
+
+## 9. Финальное решение
+
+Принимаем поэтапную security-модель.
+
+Для MVP:
+
+```text
+Берем компактный security core.
+Не берем enterprise-heavy security stack.
+```
+
+Для B2B-пилота:
+
+```text
+Если есть оператор, добавляем OperatorVault / operator-controlled escrow,
+operator-specific pause и reconciliation.
+```
+
+Для full launch:
+
+```text
+Масштабируем безопасность вместе с TVL, jackpot, операторами и юридической структурой.
+```
+
+Финальный вывод:
+
+```text
+OX не должен экономить на безопасности, но и не должен строить дорогую security-корпорацию до первого запуска.
+Правильный путь - безопасный MVP, затем усиление после proof case, затем институциональная security-модель при масштабировании.
+```

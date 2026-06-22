@@ -463,7 +463,17 @@ KYC/compliance checks должны происходить до risk entry или
 9. Smart Contract Custody Memo:
    TreasuryVault, OperatorVault, PayoutVault, pause, multisig, migration.
 10. First Pilot Legal Checklist:
-   what must be ready before first commercial draw.
+    what must be ready before first commercial draw.
+11. Contracting Law & Dispute Memo:
+    contracting entity, governing law, arbitration/court forum, enforceability.
+12. Tax Structure Memo:
+    platform fee/revenue share tax treatment, taxable presence, permanent establishment, VAT/GST/withholding risk.
+13. IP Protection Memo:
+    brand, code, smart contracts, documentation, trade secrets, copyright, trademark, patent relevance.
+14. Liability & Incident Allocation Memo:
+    liability for smart contract/backend/oracle/operator integration bugs, caps, SLA, insurance/reserve.
+15. Legal Budget & Counsel Plan:
+    cost/timeline by model and list of required international counsel/local counsel opinions.
 
 ## 14. Вопросы юристу
 
@@ -504,6 +514,11 @@ KYC/compliance checks должны происходить до risk entry или
 5. Кто отвечает, если оператор не выплатил игроку?
 6. Можно ли публично раскрывать non-payment/dispute status?
 7. Какие payout SLA обязательны?
+8. В какой юрисдикции должны заключаться договоры OX с операторами?
+9. Какое governing law лучше использовать для operator agreements?
+10. Какой dispute forum предпочтителен: локальный суд, международный арбитраж, место арбитража?
+11. Насколько реально принудительно исполнить решение против оператора в целевых странах?
+12. Какие clauses обязательны по reconciliation, payout disputes, incident handling, termination and offboarding?
 
 ### 14.5. USDC / VASP / Payment
 
@@ -547,6 +562,10 @@ KYC/compliance checks должны происходить до risk entry или
 3. Как описать non-upgradeable MVP and migration policy?
 4. Какие disclaimers нужны по oracle/manual fallback/appeal window?
 5. Как оформлять incident report при resultRoot/payoutRoot ошибке?
+6. Если баг в smart contract, backend, oracle, payout manifest или operator integration приводит к неправильной выплате, кто несет ответственность перед игроком, оператором и регулятором?
+7. Можно ли договорно ограничить ответственность OX за technical failure?
+8. Какие liability caps, SLA, insurance или reserve нужны для B2B-пилота?
+9. Кто финансирует исправление ошибки: OX, оператор, страхование, reserve, отдельный incident budget?
 
 ### 14.10. Marketing / Restricted countries
 
@@ -555,6 +574,35 @@ KYC/compliance checks должны происходить до risk entry или
 3. Какие страны no-go?
 4. Нужна ли geo-blocking policy на frontend/API/quote?
 5. Можно ли публиковать payout history без признания direct player-facing operation?
+
+### 14.11. Tax / Revenue share
+
+1. Как будет облагаться platform fee / revenue share OX в Curaçao, Anjouan, UAE и странах операторов?
+2. Где у OX возникает taxable presence / permanent establishment?
+3. Нужно ли OX становиться налоговым резидентом выбранной юрисдикции или достаточно supplier-компании?
+4. Есть ли withholding tax, VAT/GST или gambling duty risk по платежам от операторов?
+5. Как налогово безопаснее оформлять fee model: fixed SaaS fee, setup fee, per-ticket tech fee, revenue share или hybrid?
+6. Как должны оформляться invoices, settlement reports и transfer pricing между entity OX, оператором и техническими подрядчиками?
+
+### 14.12. Intellectual property
+
+1. Как лучше защитить IP OX: код, smart contracts, архитектуру, бренд, документацию, интерфейс, название, домены и базы данных?
+2. Достаточно ли copyright, trade secret, trademark protection и договорных ограничений с подрядчиками/операторами?
+3. Есть ли смысл рассматривать patent protection для отдельных технических решений или это экономически/юридически нецелесообразно?
+4. Кому должны принадлежать права на код, смарт-контракты, дизайн, документацию и интеграционные SDK?
+5. Какие IP clauses нужны в договорах с разработчиками, аудиторами, операторами и интеграторами?
+
+### 14.13. Legal budget / counsel structure
+
+1. Какой ориентировочный бюджет и сроки legal review по трем режимам:
+   Direct OX B2C pilot,
+   B2B supplier / operator-controlled escrow,
+   co-operator / shared pool model?
+2. Какие документы юрист может подготовить быстро как initial memo, а какие требуют полноценного legal opinion?
+3. Нужны ли local counsel opinions в Curaçao, Anjouan, UAE и странах первых операторов?
+4. Какие вопросы обязательно должен подтверждать именно local counsel: gambling classification, supplier license, advertising, tax, payout, crypto/USDC, KYC/AML, data/privacy?
+5. Достаточно ли одной международной фирмы как lead counsel или нужна структура lead counsel + local counsel per jurisdiction?
+6. Какой минимальный набор legal opinions нужен до первого commercial draw?
 
 ## 15. План следующих 30 дней
 

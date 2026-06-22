@@ -953,13 +953,36 @@ PayoutsPending
 PayoutsActive
 Paid
 ManualClaimAvailable
-BlockedKYC
+BlockedCompliance
+ManualReview
 RefundReady
 RefundPaid
 GasPaused
 ```
 
 Внутренние технические статусы можно показывать только в админ-панели.
+
+Канонический слой claimability для API, UI, executor и support:
+
+```text
+not-ready
+executor-auto
+user-manual
+refund
+already-claimed
+blocked-compliance
+manual-review
+expired
+reissued
+```
+
+Правила:
+
+- backend не должен показывать выплату как claimable, если root не активирован, proof отсутствует, payout заблокирован compliance/legal hold или chain state уже показывает claimed/refunded;
+- `BlockedKYC` не является публичным каноническим статусом MVP;
+- если KYC/eligibility требуется заранее, проверка должна происходить до signed quote/risk entry;
+- post-win блокировка допустима только как редкий AML/sanctions/legal/compliance hold и снаружи маппится в `blocked-compliance` или `manual-review`;
+- executor outage, gas spike, RPC degradation, queue backlog или sponsor-tx failure не должны менять payout truth и не являются основанием автоматически строить refundRoot, если settlement basis корректен.
 
 ---
 
@@ -1120,6 +1143,7 @@ MVP должен пройти:
 - описаны proof checks для Payout Executor.
 - добавлены B2B/B2B2C-compatible поля operatorId, jurisdictionId, licenseScope и poolScope.
 - добавлен минимальный Operator Registry и operator reconciliation report как internal/post-MVP compatible слой.
+- зафиксирован канонический claimability/status dictionary для frontend, backend, executor и support.
 
 ---
 

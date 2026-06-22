@@ -1,0 +1,310 @@
+# OX - что принимаем из CryptoGamp для OX MVP
+
+Дата: 20.06.2026
+Версия: v1
+Статус: рабочее решение для синхронизации OX и обновленного CryptoGamp
+
+---
+
+## 1. Назначение документа
+
+Этот документ фиксирует, какие идеи из обновленного `CryptoGamp` принимаются в OX, а какие не переносятся без исправления.
+
+Главное ограничение:
+
+```text
+Канонический MVP OX остается продуктом на 15 событий.
+CryptoGamp/OX-16 рассматривается только как отдельный premium/post-MVP вариант, а не как замена базового MVP.
+```
+
+Если этот документ конфликтует с канонической архитектурой OX MVP, приоритет имеет:
+
+1. `OX_Каноническая_архитектура_MVP_ТЗ_v1`;
+2. юридико-стратегическая модель OX;
+3. этапы ТЗ OX;
+4. этот alignment-документ.
+
+---
+
+## 2. Что принимаем из CryptoGamp
+
+### 2.1. Merkle/root payout architecture
+
+Принимаем полностью.
+
+OX уже идет в том же направлении:
+
+- `resultRoot`;
+- `payoutRoot`;
+- `refundRoot`;
+- payout/refund manifest;
+- Merkle proof;
+- `claim`;
+- `claimFor`;
+- executor-friendly payout path.
+
+Финальное правило:
+
+```text
+on-chain слой хранит деньги, состояния, roots и claim state.
+off-chain слой считает winners, строит manifests, Merkle trees и read-model.
+```
+
+### 2.2. Executor outage rule
+
+Принимаем.
+
+Если automatic executor временно не доставил выплату, это не делает корректный `payoutRoot` ошибочным.
+
+Каноническое правило OX:
+
+```text
+Executor outage, gas spike, RPC degradation, queue backlog или sponsor-tx failure не являются основанием автоматически включать refundRoot, если settlement basis корректен.
+```
+
+Если после активации `payoutRoot` выплата не доставлена automatic executor-ом в течение технического окна, пользователь должен получить понятный `manual claim` fallback.
+
+### 2.3. Canonical claimability statuses
+
+Принимаем как основу для UI/API/support.
+
+Канонические пользовательские payout/claimability статусы OX:
+
+- `not-ready`;
+- `executor-auto`;
+- `user-manual`;
+- `refund`;
+- `already-claimed`;
+- `blocked-compliance`;
+- `manual-review`;
+- `expired`;
+- `reissued`.
+
+Запрещено создавать произвольные публичные статусы, которые ломают единый язык UI, support, backend и payout executor.
+
+Отдельно:
+
+```text
+BlockedKYC не должен быть каноническим публичным статусом MVP.
+Если KYC/eligibility нужен, он должен проверяться до risk entry / signed quote.
+Post-win блокировка допустима только как редкий compliance/legal/AML/sanctions hold и снаружи маппится в blocked-compliance или manual-review.
+```
+
+### 2.4. Evidence discipline
+
+Принимаем.
+
+Для sensitive flows обязательны:
+
+- reasonCode;
+- evidenceHash;
+- evidenceLink, если применимо;
+- actor;
+- role;
+- timestamp;
+- affected draw/root/version;
+- selected remediation path;
+- approvals.
+
+Нельзя silently overwrite финальные evidence bundles.
+
+### 2.5. Retention policy
+
+Принимаем как целевой стандарт, но с юридическим уточнением по странам.
+
+Минимум для MVP:
+
+- payout manifests - 5 лет;
+- refund manifests - 5 лет;
+- Merkle proofs - 5 лет;
+- audit logs - 5 лет;
+- public payout history - максимально долго;
+- on-chain roots and events - постоянно.
+
+Целевой стандарт:
+
+- manifests/proofs/audit logs - 10 лет;
+- public payout history - permanent archive / максимально долгий публичный архив без персональных данных.
+
+### 2.6. Operational runbooks
+
+Принимаем как направление для этапа 14 и post-MVP операционной зрелости:
+
+- executor outage and gas incident runbook;
+- resultRoot/payoutRoot error runbook;
+- blocked-compliance/manual-review runbook;
+- support and escalation flow;
+- incident response framework;
+- postmortem and follow-up framework;
+- monitoring and alerting framework;
+- backup recovery and business continuity framework.
+
+Для MVP эти runbooks не должны превращаться в тяжелую бюрократию, но критические сценарии должны быть описаны до первого коммерческого draw.
+
+### 2.7. API discipline
+
+Принимаем.
+
+Frontend, backend, executor, support и admin panel должны использовать один язык:
+
+- draw status;
+- result status;
+- payout status;
+- claimability;
+- executor status;
+- refund status;
+- manual-review status.
+
+Backend не должен показывать выплату как claimable, если:
+
+- root не активирован;
+- proof отсутствует;
+- payout заблокирован compliance/legal hold;
+- chain state уже показывает claimed/refunded;
+- backend proof расходится с on-chain root.
+
+### 2.8. Public payout history as moat
+
+Принимаем и уже считаем частью OX-стратегии.
+
+Публичная история тиражей, выплат, roots, manifests, settlement и operator reconciliation является долгосрочным proof/marketing asset.
+
+Маркетинг может использовать факты прошедших тиражей и выплат, но не должен обещать будущие объемы выплат как гарантированный результат.
+
+---
+
+## 3. Что не принимаем без исправления
+
+### 3.1. MVP на 16 событий
+
+Не принимаем как OX MVP.
+
+```text
+OX MVP = 15 событий.
+OX-16 / CryptoGamp-16 = отдельный premium/post-MVP вариант.
+```
+
+### 3.2. GLOBAL_POOL как MVP default
+
+Не принимаем.
+
+Для OX канон:
+
+```text
+operatorPool / countryPool / licensePool first;
+globalPool only after legal approval.
+```
+
+### 3.3. Direct custody как единственный режим
+
+Не принимаем.
+
+OX обязан поддерживать два custody mode:
+
+1. `Direct OX Mode`;
+2. `B2B Operator-Controlled Escrow Mode`.
+
+Для B2B/B2B2C pilot предпочтителен `OperatorVault / operator-controlled escrow`.
+
+### 3.4. 3 USDC minimum stake
+
+Не принимаем.
+
+Для OX согласован старт:
+
+```text
+минимальная цена одной линии / комбинации = 1 USDC
+```
+
+Цена должна оставаться параметром draw, а не hardcode.
+
+### 3.5. 2-of-2 multisig как OX governance baseline
+
+Не принимаем как финальный OX-канон.
+
+Для OX MVP сохраняется:
+
+```text
+critical actions require multisig 2-of-3
+```
+
+### 3.6. ExpressCore как production architecture
+
+Не принимаем.
+
+Текущий `ExpressCore` можно рассматривать только как transition prototype.
+
+Production OX architecture должна оставаться модульной:
+
+- `DrawManager`;
+- `TicketVault`;
+- `TreasuryVault / OperatorVault`;
+- `ResultRegistry`;
+- `PayoutVault`;
+- `EmergencyController`;
+- `AccessController`.
+
+### 3.7. Stub JackpotVault как реализованный vault
+
+Не принимаем.
+
+`JackpotVault` считается реализованным только если он реально:
+
+- принимает актив;
+- хранит balances;
+- разделяет available/reserved;
+- резервирует jackpot;
+- release/payout делает через контролируемый path;
+- эмитит события;
+- покрыт unit/invariant tests.
+
+### 3.8. Reserve accounting без источника
+
+Не принимаем без уточнения.
+
+Любой reserve должен иметь источник:
+
+- внутри platform fee;
+- отдельная утвержденная доля;
+- treasury-funded buffer;
+- operator-funded buffer.
+
+Нельзя учитывать 80/10/10 и дополнительно reserve так, будто сумма экономики превышает 100%.
+
+---
+
+## 4. Что переносим в OX сейчас
+
+В текущие OX-документы переносим:
+
+1. executor outage не ломает payout truth;
+2. manual claim fallback открывается при сбое доставки выплаты;
+3. canonical claimability statuses;
+4. BlockedKYC заменяется на blocked-compliance/manual-review как внешний статус;
+5. evidence discipline для sensitive flows;
+6. retention policy minimum/target;
+7. public payout history как permanent proof archive;
+8. API/status discipline между frontend/backend/executor/support.
+
+Не переносим сейчас:
+
+1. 16 событий как MVP;
+2. reduced draw 16 -> 15/14/13 как MVP OX;
+3. globalPool как default;
+4. 3 USDC;
+5. 2-of-2 governance;
+6. ExpressCore production path.
+
+---
+
+## 5. Финальное решение
+
+CryptoGamp полезен как источник зрелых operational practices и OX-16/premium идеи, но не меняет базовый OX MVP.
+
+Фиксируем:
+
+```text
+OX MVP остается 15-event product.
+CryptoGamp-16 можно рассматривать как post-MVP/premium branch после отдельного согласования.
+В OX переносим только те практики, которые усиливают Merkle/root settlement, executor reliability, evidence, retention, API discipline и public payout history.
+```
