@@ -347,7 +347,7 @@ Unclaimed payouts:
 Базовая экономика:
 
 ```text
-80% handle -> ordinary prizePool
+80% handle -> Daily Prize Pool / ordinary prizePool текущего тиража
 10% handle -> platform fee
 10% handle -> jackpotContribution следующего тиража
 ```
@@ -355,7 +355,14 @@ Unclaimed payouts:
 Ключевое правило:
 
 ```text
+В каждом draw есть два отдельных призовых слоя:
+1. Daily Prize Pool текущего тиража.
+2. Накопительный activeJackpot.
+
+Daily Prize Pool разыгрывается в каждом валидном тираже.
+activeJackpot выплачивается только при 15/15.
 jackpotContribution текущего тиража не добавляется к activeJackpot текущего тиража.
+jackpot и Daily Prize Pool нельзя смешивать в один общий призовой котел.
 ```
 
 | Сценарий | Ordinary pool | Active jackpot | Jackpot contribution текущего тиража |

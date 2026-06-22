@@ -407,7 +407,7 @@ operator wallet / operator balance -> OperatorVault или operator-controlled e
 Базовое распределение:
 
 ```text
-prizePool = handle * 80%
+dailyPrizePool = handle * 80%
 platformFeeGross = handle * 10%
 jackpotContribution = handle * 10%
 gasReserve = handle * 2%
@@ -421,13 +421,13 @@ gasReserve является внутренней частью platformFeeGross,
 а не дополнительным удержанием сверх 80/10/10.
 ```
 
-Gas reserve должен учитываться отдельно от prizePool и jackpot. Для MVP допускаются три варианта реализации:
+Gas reserve должен учитываться отдельно от Daily Prize Pool и jackpot. Для MVP допускаются три варианта реализации:
 
 1. отдельный `GasReserveWallet` (кошелек резерва газа);
 2. отдельный баланс внутри `TreasuryVault`;
 3. пополнение executor wallet из операционного кошелька с обязательным учетом gas reserve.
 
-Финальный вариант выбирается на этапе инфраструктуры. В любом варианте prizePool и jackpot не используются для оплаты газа.
+Финальный вариант выбирается на этапе инфраструктуры. В любом варианте Daily Prize Pool и jackpot не используются для оплаты газа.
 
 Функции:
 
@@ -442,9 +442,12 @@ applyJackpotSupportTopUp(drawId, amount)
 
 Правила:
 
-- prizePool нельзя использовать для gas reserve;
+- Daily Prize Pool нельзя использовать для gas reserve;
 - jackpot нельзя использовать для gas reserve;
 - jackpotContribution текущего тиража идет в следующий тираж;
+- activeJackpot выплачивается только при 15/15;
+- Daily Prize Pool разыгрывается отдельно в текущем валидном тираже;
+- jackpot и Daily Prize Pool нельзя смешивать в один общий призовой котел;
 - activeJackpot фиксируется до Open;
 - минимальный публичный джекпот MVP = 5 000 USDC;
 - top-up до минимального джекпота идет из jackpot support reserve или операционных средств;
@@ -454,7 +457,7 @@ applyJackpotSupportTopUp(drawId, amount)
 События:
 
 ```text
-TreasuryAccounted(drawId, handle, prizePool, platformFeeGross, jackpotContribution)
+TreasuryAccounted(drawId, handle, dailyPrizePool, platformFeeGross, jackpotContribution)
 GasReserveAccounted(drawId, gasReserve, platformOperatingFee)
 JackpotLocked(drawId, activeJackpot)
 JackpotSupportTopUp(drawId, amount, source)
@@ -638,7 +641,7 @@ Refund manifest -> Merkle root -> sponsored claim -> fallback claim
 - при 14/13 activeJackpot 15/15 не разыгрывается;
 - activeJackpot переносится дальше;
 - 10% текущего оборота идет в джекпот следующего тиража;
-- 80% prizePool распределяется по сокращенной сетке;
+- 80% Daily Prize Pool распределяется по сокращенной сетке;
 - payout manifest должен содержать validEventsCount;
 - payout root публикуется уже по сокращенной сетке.
 
@@ -794,7 +797,7 @@ activeJackpot cannot decrease after Open
 ```
 
 ```text
-sum(prizePool + platformFeeGross + jackpotContribution) == handle
+sum(dailyPrizePool + platformFeeGross + jackpotContribution) == handle
 ```
 
 ```text
@@ -839,7 +842,7 @@ DrawCancelled(drawId, reasonCode)
 
 TicketPurchased(drawId, ticketId, buyer, ticketHash, combinationsCount, ticketPrice, operatorIdHash, jurisdictionIdHash, poolScope)
 
-TreasuryAccounted(drawId, handle, prizePool, platformFeeGross, jackpotContribution)
+TreasuryAccounted(drawId, handle, dailyPrizePool, platformFeeGross, jackpotContribution)
 GasReserveAccounted(drawId, gasReserve, platformOperatingFee)
 JackpotLocked(drawId, activeJackpot)
 JackpotSupportTopUp(drawId, amount, source)
